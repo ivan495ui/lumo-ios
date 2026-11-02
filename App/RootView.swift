@@ -14,7 +14,7 @@ struct RootView: View {
                 }
             } else if model.snapshot != nil {
                 TabView {
-                    Tab("Обзор", systemImage: "house.fill") { WalletPage(title: "lumo") { OverviewView() } }
+                    Tab("Обзор", systemImage: "house.fill") { WalletPage(title: "lumo", showsAddButton: false) { OverviewView() } }
                     Tab("Счета", systemImage: "creditcard.fill") { WalletPage(title: "Счета") { AccountsView() } }
                     Tab("Конверты", systemImage: "square.stack.3d.up.fill") { WalletPage(title: "Конверты") { EnvelopesView() } }
                     Tab("Аналитика", systemImage: "chart.bar.xaxis") { WalletPage(title: "Аналитика") { AnalyticsView() } }
@@ -33,24 +33,30 @@ struct RootView: View {
 struct WalletPage<Content: View>: View {
     let title: String
     let content: Content
+    let showsAddButton: Bool
     @State private var adding = false
     @State private var settings = false
-    init(title: String, @ViewBuilder content: () -> Content) {
+    init(title: String, showsAddButton: Bool = true, @ViewBuilder content: () -> Content) {
         self.title = title
         self.content = content()
+        self.showsAddButton = showsAddButton
     }
     var body: some View {
         NavigationStack {
             content.navigationTitle(title)
                 .navigationBarTitleDisplayMode(.inline)
                 .listSectionSpacing(16)
+                .scrollContentBackground(.hidden)
+                .background(LumoTheme.background)
                 .toolbar {
                     ToolbarItem(placement: .principal) { Text(title).font(LumoType.pageTitle) }
                     ToolbarItem(placement: .topBarLeading) {
-                        Button { settings = true } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Настройки")
+                        Button { settings = true } label: { Image(systemName: "gearshape") }.accessibilityLabel("Настройки")
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Добавить операцию")
+                    if showsAddButton {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Добавить операцию")
+                        }
                     }
                 }
                 .sheet(isPresented: $adding) { NavigationStack { TransactionForm() } }

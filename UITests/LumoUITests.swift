@@ -23,12 +23,13 @@ final class LumoUITests: XCTestCase {
             screenshot(filename)
         }
         app.tabBars.buttons["Обзор"].tap()
-        app.buttons["Добавить операцию"].tap()
+        app.buttons["Расход"].tap()
         XCTAssertTrue(app.textFields["transaction.amount"].waitForExistence(timeout: 3))
         screenshot("06-transaction-form")
     }
     func testAddExpenseAndFindInHistory() {
-        app.buttons["Добавить операцию"].tap()
+        XCTAssertTrue(app.buttons["Расход"].waitForExistence(timeout: 15))
+        app.buttons["Расход"].tap()
         let amount = app.textFields["transaction.amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 10))
         amount.tap(); amount.typeText("12.34")

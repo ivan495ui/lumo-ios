@@ -20,17 +20,18 @@ struct BalanceValue: View {
     let cents: Int
     let currency: String
     var identifier: String? = nil
+    var onAccent = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            Text(moneyNumber(cents)).font(LumoType.balance).tracking(-1.6)
+            Text(moneyNumber(cents)).font(LumoType.balance).tracking(-1.6).foregroundStyle(LumoTheme.text)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
                 .accessibilityLabel(money(cents, currency: currency))
                 .accessibilityIdentifier(identifier ?? "")
             Text(currencySymbol(currency)).font(LumoType.amount)
-                .foregroundStyle(.secondary).accessibilityHidden(true)
+                .foregroundStyle(onAccent ? LumoTheme.heroSecondary : Color.secondary).accessibilityHidden(true)
         }
     }
 }
@@ -96,7 +97,7 @@ struct TransactionRow: View {
     let transaction: LedgerTransaction
     var body: some View {
         HStack(spacing: 13) {
-            Badge(symbol: transaction.symbol, color: transaction.isIncome ? .green : .gray)
+            Badge(symbol: transaction.symbol, color: transaction.isIncome ? LumoTheme.positive : .gray)
             VStack(alignment: .leading, spacing: 4) {
                 Text(model.categoryName(transaction.categoryId) ?? transaction.label).font(LumoType.label)
                 Text([transaction.comment?.isEmpty == false ? transaction.comment : nil, model.accountName(transaction.accountId), transaction.date]
@@ -107,7 +108,7 @@ struct TransactionRow: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(amountLabel)
                     .font(LumoType.amount)
-                    .foregroundStyle(transaction.isIncome ? Color.green : Color.primary).monospacedDigit()
+                    .foregroundStyle(transaction.isIncome ? LumoTheme.positive : LumoTheme.text).monospacedDigit()
                 if let qty = transaction.qty, qty != 0 {
                     Text(qty.formatted(.number.precision(.fractionLength(0...8))))
                         .font(LumoType.caption).foregroundStyle(.secondary)

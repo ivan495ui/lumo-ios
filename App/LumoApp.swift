@@ -9,7 +9,7 @@ struct LumoApp: App {
             RootView()
                 .environmentObject(model)
                 .preferredColorScheme(.dark)
-                .tint(Color(hex: "#4690FF"))
+                .tint(LumoTheme.accent)
         }
     }
 }
