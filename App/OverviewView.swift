@@ -10,11 +10,6 @@ struct OverviewView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     balanceCard(snapshot)
-                    HStack(spacing: 16) {
-                        quickButton("Расход", symbol: "arrow.up.right", kind: .expense)
-                        quickButton("Доход", symbol: "arrow.down.left", kind: .income)
-                        quickButton("Перевод", symbol: "arrow.left.arrow.right", kind: .transfer)
-                    }
                     envelopeSection(snapshot)
                     accountsSection
                     recentSection
@@ -49,27 +44,55 @@ struct OverviewView: View {
                     }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Режим баланса")
                 }
             }.font(.subheadline)
-            Text(money(amount, currency: model.currency))
-                .font(.system(size: 50, weight: .light)).tracking(-1.8)
-                .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
-                .contentTransition(.numericText())
-                .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: amount)
-                .accessibilityIdentifier("overview.balance")
-            Text(showTotal ? "Карта, наличные и криптовалюта" : "Карта и наличные")
-                .font(.caption).foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Text(moneyNumber(amount))
+                    .font(.system(size: 50, weight: .light)).tracking(-1.8)
+                    .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: amount)
+                    .accessibilityLabel(money(amount, currency: model.currency))
+                    .accessibilityIdentifier("overview.balance")
+                Text(currencySymbol(model.currency)).font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.secondary).accessibilityHidden(true)
+            }
+            HStack {
+                monthMetric("Доходы", amount: snapshot.summary.income, month: snapshot.month, color: .green)
+                Spacer()
+                monthMetric("Расходы", amount: snapshot.summary.expenses, month: snapshot.month, color: .primary)
+            }.padding(.vertical, 3)
+            Divider().overlay(Color.white.opacity(0.04))
+            HStack(spacing: 8) {
+                quickButton("Расход", symbol: "arrow.up.right", kind: .expense)
+                quickButton("Доход", symbol: "arrow.down.left", kind: .income)
+                quickButton("Перевод", symbol: "arrow.left.arrow.right", kind: .transfer)
+            }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: "#1C1C1E"), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(LinearGradient(colors: [Color(hex: "#1D222C"), Color(hex: "#171A21")], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
     private func quickButton(_ title: String, symbol: String, kind: TransactionKind) -> some View {
         Button { quickKind = kind } label: {
-            VStack(spacing: 8) {
-                Image(systemName: symbol).font(.system(size: 19, weight: .medium))
-                    .frame(width: 46, height: 46)
-                    .background(Color(hex: "#1C1C1E"), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                Text(title).font(.caption.weight(.medium))
-            }.frame(maxWidth: .infinity)
+            HStack(spacing: 6) {
+                Image(systemName: symbol).font(.system(size: 13, weight: .semibold))
+                Text(title).font(.system(size: 12, weight: .medium))
+            }.frame(maxWidth: .infinity, minHeight: 44)
+                .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }.buttonStyle(.plain).foregroundStyle(.primary)
+    }
+
+    private func monthMetric(_ title: String, amount: Int, month: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("\(title) · \(monthCaption(month))").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            Text(money(amount, currency: model.currency)).font(.system(size: 17, weight: .medium))
+                .monospacedDigit().foregroundStyle(color)
+        }
+    }
+
+    private func monthCaption(_ key: String) -> String {
+        let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.dateFormat = "yyyy-MM"
+        guard let date = formatter.date(from: key) else { return key }
+        formatter.locale = Locale(identifier: "ru_RU"); formatter.dateFormat = "LLL"
+        return formatter.string(from: date)
     }
 
     private func envelopeSection(_ snapshot: Snapshot) -> some View {

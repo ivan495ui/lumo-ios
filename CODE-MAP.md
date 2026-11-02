@@ -4,15 +4,15 @@
 
 | Файл | Строк |
 |---|---:|
-| `.github/workflows/ios.yml` | 66 |
+| `.github/workflows/ios.yml` | 75 |
 | `App/AccountForms.swift` | 160 |
 | `App/AccountsView.swift` | 84 |
 | `App/AnalyticsView.swift` | 44 |
-| `App/Components.swift` | 113 |
+| `App/Components.swift` | 120 |
 | `App/EnvelopesView.swift` | 73 |
 | `App/HistoryView.swift` | 94 |
 | `App/LumoApp.swift` | 15 |
-| `App/OverviewView.swift` | 147 |
+| `App/OverviewView.swift` | 170 |
 | `App/RootView.swift` | 59 |
 | `App/SettingsView.swift` | 159 |
 | `App/TransactionForm.swift` | 198 |

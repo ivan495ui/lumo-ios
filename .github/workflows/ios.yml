@@ -1,6 +1,12 @@
 name: Native iOS preview
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Full build or a simulator design review
+        type: choice
+        options: [full, design]
+        default: full
 permissions:
   contents: read
 concurrency:
@@ -19,6 +25,7 @@ jobs:
           xcrun simctl list runtimes
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
       - name: Verify native transport
+        if: inputs.mode != 'design'
         run: |
           node tools/bundle-engine.mjs
           git diff --exit-code -- Sources/LumoCore/Resources/finance-engine.js engine-manifest.json Vendor/Finance
@@ -27,6 +34,7 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
       - name: Build device application
+        if: inputs.mode != 'design'
         run: |
           set -o pipefail
           mkdir -p build/artifacts
@@ -35,6 +43,7 @@ jobs:
           cp -R build/device/Build/Products/Release-iphoneos/lumo.app build/package/Payload/
           cd build/package && zip -qry ../artifacts/lumo-unsigned.ipa Payload
       - name: Verify device archive
+        if: inputs.mode != 'design'
         run: python3 tools/verify-ipa.py build/artifacts/lumo-unsigned.ipa
       - name: Build and launch fresh simulator
         run: bash tools/simulator-check.sh prepare

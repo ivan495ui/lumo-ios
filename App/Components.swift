@@ -11,15 +11,22 @@ extension Color {
     }
 }
 
-func money(_ cents: Int, currency: String = "BYN") -> String {
+func moneyNumber(_ cents: Int) -> String {
     let number = NSDecimalNumber(value: cents).dividing(by: 100)
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     formatter.locale = Locale(identifier: "ru_RU")
     formatter.maximumFractionDigits = 2
     formatter.minimumFractionDigits = cents % 100 == 0 ? 0 : 2
-    let symbol = ["BYN": "Br", "RUB": "₽", "USD": "$"][currency] ?? currency
-    return "\(formatter.string(from: number) ?? "0") \(symbol)"
+    return formatter.string(from: number) ?? "0"
+}
+
+func currencySymbol(_ currency: String) -> String {
+    ["BYN": "Br", "RUB": "₽", "USD": "$"][currency] ?? currency
+}
+
+func money(_ cents: Int, currency: String = "BYN") -> String {
+    "\(moneyNumber(cents)) \(currencySymbol(currency))"
 }
 
 func amountText(_ cents: Int) -> String {
