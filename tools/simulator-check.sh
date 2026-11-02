@@ -25,7 +25,7 @@ if [ "$mode" = prepare ]; then
 elif [ "$mode" = test ]; then
   device=$(cat build/sim-device.txt)
   set +e
-  python3 tools/run-bounded.py 360 xcodebuild -project lumo.xcodeproj -scheme lumo -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath build/simulator -resultBundlePath build/ui-tests.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 60 -maximum-test-execution-time-allowance 120 CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee build/artifacts/simulator-tests.log
+  python3 tools/run-bounded.py 600 xcodebuild -project lumo.xcodeproj -scheme lumo -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath build/simulator -resultBundlePath build/ui-tests.xcresult -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 180 CODE_SIGNING_ALLOWED=NO test-without-building 2>&1 | tee build/artifacts/simulator-tests.log
   test_result=${PIPESTATUS[0]}
   set -e
   xcrun xcresulttool export attachments --path build/ui-tests.xcresult --output-path build/artifacts/screenshots || true

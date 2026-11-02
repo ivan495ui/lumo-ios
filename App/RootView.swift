@@ -42,6 +42,8 @@ struct WalletPage<Content: View>: View {
     var body: some View {
         NavigationStack {
             content.navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .listSectionSpacing(16)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { settings = true } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Настройки")

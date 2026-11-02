@@ -12,8 +12,8 @@
 | `App/EnvelopesView.swift` | 73 |
 | `App/HistoryView.swift` | 94 |
 | `App/LumoApp.swift` | 15 |
-| `App/OverviewView.swift` | 105 |
-| `App/RootView.swift` | 57 |
+| `App/OverviewView.swift` | 147 |
+| `App/RootView.swift` | 59 |
 | `App/SettingsView.swift` | 159 |
 | `App/TransactionForm.swift` | 198 |
 | `App/WalletModel.swift` | 156 |
