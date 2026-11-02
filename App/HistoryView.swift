@@ -56,7 +56,7 @@ struct TransactionDetail: View {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(transaction.label, systemImage: transaction.symbol).foregroundStyle(.secondary)
-                        Text(money(transaction.amount, currency: model.currency)).font(.system(size: 42, weight: .light)).monospacedDigit()
+                        BalanceValue(cents: transaction.amount, currency: model.currency)
                     }.padding(.vertical, 12)
                     LabeledContent("Дата", value: transaction.date)
                     if let name = model.accountName(transaction.accountId) { LabeledContent("Счёт", value: name) }

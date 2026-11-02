@@ -35,7 +35,7 @@ struct AccountDetail: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(account.kind == "crypto" ? "Стоимость активов" : "Остаток", systemImage: account.symbol).foregroundStyle(.secondary)
-                        Text(money(account.balance ?? 0, currency: model.currency)).font(.system(size: 42, weight: .light)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                        BalanceValue(cents: account.balance ?? 0, currency: model.currency)
                     }.padding(.vertical, 12)
                 }
                 Section {
@@ -54,9 +54,9 @@ struct AccountDetail: View {
                             NavigationLink { AssetForm(accountID: accountID, asset: asset) } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 5) {
-                                        Text(asset.symbol).font(.headline)
+                                        Text(asset.symbol).font(LumoType.section)
                                         Text("\((asset.qty ?? 0).formatted(.number.precision(.fractionLength(0...8)))) · \(money(asset.price, currency: model.currency)) за 1")
-                                            .font(.caption).foregroundStyle(.secondary)
+                                            .font(LumoType.caption).foregroundStyle(.secondary)
                                     }
                                     Spacer()
                                     Text(money(asset.value ?? 0, currency: model.currency)).monospacedDigit()

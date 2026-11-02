@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var candidateText: String?
     @State private var candidate: Snapshot?
     @State private var replacing = false
+    @State private var dataError: String?
     var body: some View {
         Form {
             if let snapshot = model.snapshot {
@@ -35,9 +36,10 @@ struct SettingsView: View {
                 }
             }
             Section {
+                if let dataError { Text(dataError).foregroundStyle(.red).font(LumoType.body) }
                 Button("Экспортировать JSON", systemImage: "square.and.arrow.up") {
                     do { document = LedgerDocument(text: try model.exportText()); exporting = true }
-                    catch { model.error = error.localizedDescription }
+                    catch { dataError = error.localizedDescription }
                 }.disabled(model.recoveryRequired)
                 Button("Импортировать JSON", systemImage: "square.and.arrow.down") { importing = true }
             } header: { Text("Данные") }
@@ -50,7 +52,7 @@ struct SettingsView: View {
         }.navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { dismiss() } } }
             .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: "lumo-\(WalletModel.dateKey(Date()))") { result in
-                if case .failure(let error) = result { model.error = error.localizedDescription }
+                if case .failure(let error) = result { dataError = error.localizedDescription }
             }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
                 do {
@@ -61,12 +63,14 @@ struct SettingsView: View {
                     candidate = try model.inspectImport(text)
                     candidateText = text
                     replacing = true
-                } catch { model.error = error.localizedDescription }
+                } catch { dataError = error.localizedDescription }
             }
             .alert("Заменить данные этой копией?", isPresented: $replacing) {
                 Button("Отмена", role: .cancel) { candidateText = nil; candidate = nil }
                 Button("Импортировать", role: .destructive) {
-                    if let candidateText { _ = model.importText(candidateText) }
+                    if let candidateText, !model.importText(candidateText) {
+                        dataError = model.error; model.error = nil
+                    }
                     candidateText = nil; candidate = nil
                 }
             } message: {

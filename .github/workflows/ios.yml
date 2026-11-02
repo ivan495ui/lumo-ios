@@ -5,7 +5,7 @@ on:
       mode:
         description: Full build or a simulator design review
         type: choice
-        options: [full, design]
+        options: [full, design, device]
         default: full
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
           xcrun simctl list runtimes
           if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
       - name: Verify native transport
-        if: inputs.mode != 'design'
+        if: inputs.mode == 'full'
         run: |
           node tools/bundle-engine.mjs
           git diff --exit-code -- Sources/LumoCore/Resources/finance-engine.js engine-manifest.json Vendor/Finance
@@ -46,8 +46,10 @@ jobs:
         if: inputs.mode != 'design'
         run: python3 tools/verify-ipa.py build/artifacts/lumo-unsigned.ipa
       - name: Build and launch fresh simulator
+        if: inputs.mode != 'device'
         run: bash tools/simulator-check.sh prepare
       - name: Upload first real preview
+        if: inputs.mode != 'device'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: lumo-early-preview
@@ -56,6 +58,7 @@ jobs:
             build/artifacts/lumo-unsigned.ipa
           retention-days: 1
       - name: Native UI checks
+        if: inputs.mode != 'device'
         run: bash tools/simulator-check.sh test
       - name: Upload preview and logs
         if: always()

@@ -47,7 +47,7 @@ struct TransactionForm: View {
                         ForEach(assets) { asset in Text("\(asset.symbol) · \(model.accountName(asset.accountId) ?? "")").tag(asset.id) }
                     }
                     TextField("Количество", text: $quantity).keyboardType(.decimalPad)
-                    if assets.isEmpty { Text("Сначала добавь актив на криптосчёте.").font(.footnote).foregroundStyle(.secondary) }
+                    if assets.isEmpty { Text("Сначала добавь актив на криптосчёте.").font(LumoType.caption).foregroundStyle(.secondary) }
                     if kind != .cryptoSpend {
                         Toggle(kind == .cryptoBuy ? "Оплачено с карты / наличными" : "Зачислено на карту / наличными", isOn: $fiatFlow)
                     }
@@ -55,7 +55,7 @@ struct TransactionForm: View {
             }
             Section {
                 TextField(kind == .adjustment ? "Изменение суммы: + или −" : "Сумма, \(model.currency)", text: $amount)
-                    .font(.system(size: 36, weight: .light)).monospacedDigit()
+                    .font(LumoType.balance).monospacedDigit()
                     .keyboardType(kind == .adjustment ? .numbersAndPunctuation : .decimalPad)
                     .accessibilityIdentifier("transaction.amount")
                 if kind != .envTransfer && (!kind.isCrypto || fiatFlow) {

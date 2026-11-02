@@ -45,6 +45,7 @@ struct WalletPage<Content: View>: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .listSectionSpacing(16)
                 .toolbar {
+                    ToolbarItem(placement: .principal) { Text(title).font(LumoType.pageTitle) }
                     ToolbarItem(placement: .topBarLeading) {
                         Button { settings = true } label: { Image(systemName: "person.crop.circle") }.accessibilityLabel("Настройки")
                     }

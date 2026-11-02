@@ -37,8 +37,8 @@ struct AnalyticsView: View {
     }
     private func metric(_ title: String, cents: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.subheadline).foregroundStyle(.secondary)
-            Text(money(cents, currency: model.currency)).font(.title2.weight(.medium)).foregroundStyle(color).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+            Text(title).font(LumoType.body).foregroundStyle(.secondary)
+            Text(money(cents, currency: model.currency)).font(LumoType.cardAmount).foregroundStyle(color).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
         }
     }
 }

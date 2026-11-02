@@ -9,8 +9,7 @@ struct EnvelopesView: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Отложено на важное").foregroundStyle(.secondary)
-                        Text(money(snapshot.derived.envelopeTotal, currency: model.currency))
-                            .font(.system(size: 42, weight: .light)).monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                        BalanceValue(cents: snapshot.derived.envelopeTotal, currency: model.currency)
                     }.padding(.vertical, 12)
                 }
                 ForEach(snapshot.derived.envelopes) { envelope in
@@ -19,15 +18,15 @@ struct EnvelopesView: View {
                             VStack(alignment: .leading, spacing: 16) {
                                 HStack {
                                     Badge(symbol: envelope.symbol, color: Color(hex: envelope.color))
-                                    Text(envelope.name).font(.headline)
+                                    Text(envelope.name).font(LumoType.section)
                                     Spacer()
-                                    Text(shareLabel(envelope, all: snapshot.derived.envelopes)).font(.caption).foregroundStyle(.secondary)
+                                    Text(shareLabel(envelope, all: snapshot.derived.envelopes)).font(LumoType.caption).foregroundStyle(.secondary)
                                 }
-                                Text(money(envelope.balance ?? 0, currency: model.currency)).font(.title.weight(.medium)).monospacedDigit()
+                                Text(money(envelope.balance ?? 0, currency: model.currency)).font(LumoType.cardAmount).monospacedDigit()
                                 if envelope.goal > 0 {
                                     ProgressView(value: min(1, max(0, Double(envelope.balance ?? 0) / Double(envelope.goal))))
                                         .tint(Color(hex: envelope.color))
-                                    Text("Цель \(money(envelope.goal, currency: model.currency))").font(.caption).foregroundStyle(.secondary)
+                                    Text("Цель \(money(envelope.goal, currency: model.currency))").font(LumoType.caption).foregroundStyle(.secondary)
                                 }
                             }.padding(.vertical, 10)
                         }
@@ -57,7 +56,7 @@ struct RebalanceView: View {
                 } footer: { Text("Без криптовалюты и налогового резерва.") }
                 Section("Было → станет") {
                     ForEach(preview.rows) { row in
-                        LabeledContent(row.name) { Text("\(money(row.before, currency: model.currency)) → \(money(row.after, currency: model.currency))").font(.subheadline).monospacedDigit() }
+                        LabeledContent(row.name) { Text("\(money(row.before, currency: model.currency)) → \(money(row.after, currency: model.currency))").font(LumoType.body).monospacedDigit() }
                     }
                 }
                 Section { Button("Распределить по этим долям") { confirming = true }.disabled(preview.rows.allSatisfy { $0.before == $0.after }) }

@@ -4,6 +4,37 @@ import LumoCore
 typealias LedgerTransaction = LumoCore.Transaction
 typealias LedgerCategory = LumoCore.Category
 
+/// Five text sizes at the standard Dynamic Type setting: 48 / 20 / 17 / 15 / 12.
+enum LumoType {
+    static let balance = Font.system(size: 48, weight: .light)
+    static let pageTitle = Font.title3.weight(.semibold)
+    static let cardAmount = Font.title3.weight(.medium)
+    static let section = Font.headline
+    static let amount = Font.body.weight(.medium)
+    static let body = Font.subheadline
+    static let label = Font.subheadline.weight(.medium)
+    static let caption = Font.caption
+}
+
+struct BalanceValue: View {
+    let cents: Int
+    let currency: String
+    var identifier: String? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 7) {
+            Text(moneyNumber(cents)).font(LumoType.balance).tracking(-1.6)
+                .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
+                .accessibilityLabel(money(cents, currency: currency))
+                .accessibilityIdentifier(identifier ?? "")
+            Text(currencySymbol(currency)).font(LumoType.amount)
+                .foregroundStyle(.secondary).accessibilityHidden(true)
+        }
+    }
+}
+
 extension Color {
     init(hex: String) {
         let value = UInt64(hex.replacingOccurrences(of: "#", with: ""), radix: 16) ?? 0x4690FF
@@ -50,12 +81,12 @@ struct AccountRow: View {
         HStack(spacing: 13) {
             Badge(symbol: account.symbol, color: Color(hex: account.color))
             VStack(alignment: .leading, spacing: 3) {
-                Text(account.name).font(.body.weight(.medium))
+                Text(account.name).font(LumoType.label)
                 Text(account.kind == "crypto" ? "По введённому курсу" : account.kind == "cash" ? "Всегда под рукой" : "Мои деньги на карте")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(LumoType.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            Text(money(account.balance ?? 0, currency: currency)).monospacedDigit()
+            Text(money(account.balance ?? 0, currency: currency)).font(LumoType.amount).monospacedDigit()
         }.padding(.vertical, 5)
     }
 }
@@ -67,18 +98,19 @@ struct TransactionRow: View {
         HStack(spacing: 13) {
             Badge(symbol: transaction.symbol, color: transaction.isIncome ? .green : .gray)
             VStack(alignment: .leading, spacing: 4) {
-                Text(model.categoryName(transaction.categoryId) ?? transaction.label).font(.body.weight(.medium))
+                Text(model.categoryName(transaction.categoryId) ?? transaction.label).font(LumoType.label)
                 Text([transaction.comment?.isEmpty == false ? transaction.comment : nil, model.accountName(transaction.accountId), transaction.date]
                     .compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    .font(LumoType.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 4) {
                 Text(amountLabel)
+                    .font(LumoType.amount)
                     .foregroundStyle(transaction.isIncome ? Color.green : Color.primary).monospacedDigit()
                 if let qty = transaction.qty, qty != 0 {
                     Text(qty.formatted(.number.precision(.fractionLength(0...8))))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(LumoType.caption).foregroundStyle(.secondary)
                 }
             }
         }.padding(.vertical, 4)
@@ -99,7 +131,7 @@ struct MonthSelector: View {
         HStack {
             Button { model.changeMonth(-1) } label: { Image(systemName: "chevron.left").frame(width: 32, height: 32) }.accessibilityLabel("Предыдущий месяц")
             Spacer()
-            Text(label).font(.headline)
+            Text(label).font(LumoType.section)
             Spacer()
             Button { model.changeMonth(1) } label: { Image(systemName: "chevron.right").frame(width: 32, height: 32) }.accessibilityLabel("Следующий месяц")
         }

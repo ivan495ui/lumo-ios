@@ -3,7 +3,6 @@ import LumoCore
 
 struct OverviewView: View {
     @EnvironmentObject var model: WalletModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var quickKind: TransactionKind?
     var body: some View {
         if let snapshot = model.snapshot {
@@ -12,10 +11,9 @@ struct OverviewView: View {
                     balanceCard(snapshot)
                     envelopeSection(snapshot)
                     accountsSection
-                    recentSection
                     if model.restoredBackup {
                         Label("Открыта резервная копия. Экспортируй её в Файлы.", systemImage: "externaldrive.badge.checkmark")
-                            .font(.footnote).foregroundStyle(.secondary)
+                            .font(LumoType.caption).foregroundStyle(.secondary)
                     }
                 }
                 .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 24)
@@ -43,18 +41,8 @@ struct OverviewView: View {
                         }
                     }.buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Режим баланса")
                 }
-            }.font(.subheadline)
-            HStack(alignment: .firstTextBaseline, spacing: 7) {
-                Text(moneyNumber(amount))
-                    .font(.system(size: 50, weight: .light)).tracking(-1.8)
-                    .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
-                    .contentTransition(.numericText())
-                    .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: amount)
-                    .accessibilityLabel(money(amount, currency: model.currency))
-                    .accessibilityIdentifier("overview.balance")
-                Text(currencySymbol(model.currency)).font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary).accessibilityHidden(true)
-            }
+            }.font(LumoType.body)
+            BalanceValue(cents: amount, currency: model.currency, identifier: "overview.balance")
             HStack {
                 monthMetric("Доходы", amount: snapshot.summary.income, month: snapshot.month, color: .green)
                 Spacer()
@@ -74,7 +62,7 @@ struct OverviewView: View {
         Button { quickKind = kind } label: {
             HStack(spacing: 6) {
                 Image(systemName: symbol).font(.system(size: 13, weight: .semibold))
-                Text(title).font(.system(size: 12, weight: .medium))
+                Text(title).font(LumoType.label).lineLimit(1).minimumScaleFactor(0.85)
             }.frame(maxWidth: .infinity, minHeight: 44)
                 .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }.buttonStyle(.plain).foregroundStyle(.primary)
@@ -82,8 +70,8 @@ struct OverviewView: View {
 
     private func monthMetric(_ title: String, amount: Int, month: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("\(title) · \(monthCaption(month))").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-            Text(money(amount, currency: model.currency)).font(.system(size: 17, weight: .medium))
+            Text("\(title) · \(monthCaption(month))").font(LumoType.caption).foregroundStyle(.secondary)
+            Text(money(amount, currency: model.currency)).font(LumoType.amount)
                 .monospacedDigit().foregroundStyle(color)
         }
     }
@@ -97,7 +85,7 @@ struct OverviewView: View {
 
     private func envelopeSection(_ snapshot: Snapshot) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Конверты").font(.headline)
+            Text("Конверты").font(LumoType.section)
             HStack(alignment: .top, spacing: 10) {
                 ForEach(snapshot.derived.envelopes) { envelope in
                     NavigationLink { EnvelopeForm(envelope: envelope) } label: {
@@ -111,7 +99,7 @@ struct OverviewView: View {
                         Text(snapshot.derived.unallocated > 0 ? "Распределить свободные \(money(snapshot.derived.unallocated, currency: model.currency))" : "Проверить распределение")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2)
-                    }.font(.footnote)
+                    }.font(LumoType.caption)
                 }.buttonStyle(.plain).foregroundStyle(.blue)
             }
         }
@@ -124,44 +112,37 @@ struct OverviewView: View {
                 Image(systemName: envelope.symbol).font(.system(size: 14, weight: .semibold))
                 Spacer(minLength: 4)
                 Text("\(share.formatted(.number.precision(.fractionLength(0...2))))%")
-                    .font(.system(size: 11, weight: .medium)).monospacedDigit()
+                    .font(LumoType.caption).monospacedDigit()
             }.foregroundStyle(Color(hex: envelope.color))
-            Text(envelope.name).font(.system(size: 12, weight: .medium))
-                .lineLimit(2).frame(minHeight: 30, alignment: .topLeading)
+            Text(envelope.name).font(LumoType.label)
+                .lineLimit(2).frame(minHeight: 36, alignment: .topLeading)
             Text(money(envelope.balance ?? 0, currency: model.currency))
-                .font(.system(size: 18, weight: .medium)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
+                .font(LumoType.cardAmount).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(hex: envelope.color).opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var accountsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Счета").font(.headline)
+            Text("Счета").font(LumoType.section)
             VStack(spacing: 0) {
                 ForEach(model.visibleAccounts) { account in
                     NavigationLink { AccountDetail(accountID: account.id) } label: {
-                        HStack(spacing: 10) {
-                            AccountRow(account: account, currency: model.currency)
+                        HStack(spacing: 12) {
+                            Image(systemName: account.symbol).font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color(hex: account.color)).frame(width: 22)
+                            Text(account.name).font(LumoType.label).lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text(money(account.balance ?? 0, currency: model.currency)).font(LumoType.amount).monospacedDigit()
                             Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
-                        }.padding(.horizontal, 14).padding(.vertical, 6)
+                        }.padding(.horizontal, 14).padding(.vertical, 13)
                     }.buttonStyle(.plain)
-                    if account.id != model.visibleAccounts.last?.id { Divider().padding(.leading, 69) }
+                    if account.id != model.visibleAccounts.last?.id { Divider().padding(.leading, 48) }
                 }
             }.background(Color(hex: "#1C1C1E"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
     }
 
-    private var recentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Последние операции").font(.headline)
-            if model.transactions.isEmpty { EmptyLedger() }
-            ForEach(Array(model.transactions.prefix(3))) { transaction in
-                NavigationLink { TransactionDetail(transactionID: transaction.id) } label: { TransactionRow(transaction: transaction) }
-                    .buttonStyle(.plain)
-                if transaction.id != model.transactions.prefix(3).last?.id { Divider().padding(.leading, 55) }
-            }
-        }
-    }
 }
 
 func shareLabel(_ envelope: Envelope, all: [Envelope]) -> String {
