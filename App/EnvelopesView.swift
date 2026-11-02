@@ -3,42 +3,148 @@ import LumoCore
 
 struct EnvelopesView: View {
     @EnvironmentObject var model: WalletModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
         if let snapshot = model.snapshot {
-            List {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Отложено на важное").foregroundStyle(.secondary)
-                        BalanceValue(cents: snapshot.derived.envelopeTotal, currency: model.currency)
-                    }.padding(.vertical, 12)
-                }
-                ForEach(snapshot.derived.envelopes) { envelope in
-                    Section {
-                        NavigationLink { EnvelopeForm(envelope: envelope) } label: {
-                            VStack(alignment: .leading, spacing: 16) {
-                                HStack {
-                                    Badge(symbol: envelope.symbol, color: Color(hex: envelope.color))
-                                    Text(envelope.name).font(LumoType.section)
-                                    Spacer()
-                                    Text(shareLabel(envelope, all: snapshot.derived.envelopes)).font(LumoType.caption).foregroundStyle(.secondary)
-                                }
-                                Text(money(envelope.balance ?? 0, currency: model.currency)).font(LumoType.cardAmount).monospacedDigit()
-                                if envelope.goal > 0 {
-                                    ProgressView(value: min(1, max(0, Double(envelope.balance ?? 0) / Double(envelope.goal))))
-                                        .tint(Color(hex: envelope.color))
-                                    Text("Цель \(money(envelope.goal, currency: model.currency))").font(LumoType.caption).foregroundStyle(.secondary)
-                                }
-                            }.padding(.vertical, 10)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Распределено по конвертам")
+                            .font(LumoType.body).foregroundStyle(.secondary)
+                        Text(money(snapshot.derived.envelopeTotal, currency: model.currency))
+                            .font(LumoType.balance).monospacedDigit()
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("envelopes.balance")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    VStack(spacing: 10) {
+                        ForEach(snapshot.derived.envelopes) { envelope in
+                            NavigationLink { EnvelopeForm(envelope: envelope) } label: {
+                                envelopeCard(envelope, all: snapshot.derived.envelopes)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Изменить название и цель конверта")
                         }
                     }
+
+                    managementSection
                 }
-                Section {
-                    NavigationLink { PercentagesView() } label: { Label("Настроить доли", systemImage: "slider.horizontal.3") }
-                    NavigationLink { RebalanceView() } label: { Label("Перераспределить накопленное", systemImage: "arrow.triangle.branch") }
-                    NavigationLink { TransactionForm(initialKind: .envTransfer) } label: { Label("Перевести между конвертами", systemImage: "arrow.left.arrow.right") }
-                } footer: { Text("Карта и наличные распределяются по конвертам. Криптовалюта и налоговый резерв считаются отдельно.") }
+                .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
+            }
+            .background(LumoTheme.background)
+            .foregroundStyle(LumoTheme.text)
+        }
+    }
+
+    private func envelopeCard(_ envelope: Envelope, all: [Envelope]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: envelope.symbol)
+                    .font(LumoType.section)
+                    .foregroundStyle(LumoTheme.envelopeAccent(envelope))
+                    .frame(width: 22)
+                    .accessibilityHidden(true)
+                Text(envelope.name)
+                    .font(LumoType.label)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(LumoType.caption).foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+
+            if dynamicTypeSize.isAccessibilitySize {
+                verticalMetrics(envelope, all: all)
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        amount(envelope).fixedSize()
+                        Spacer(minLength: 0)
+                        allocation(envelope, all: all).fixedSize()
+                    }
+                    verticalMetrics(envelope, all: all)
+                }
+            }
+
+            if envelope.goal > 0 {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Цель · \(money(envelope.goal, currency: model.currency))")
+                        .font(LumoType.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ProgressView(value: min(1, max(0, Double(envelope.balance ?? 0) / Double(envelope.goal))))
+                        .tint(LumoTheme.envelopeAccent(envelope))
+                        .accessibilityLabel("Накоплено на цель")
+                }
+                .padding(.top, 2)
             }
         }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(LumoTheme.envelopeSurface(envelope), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func amount(_ envelope: Envelope) -> some View {
+        Text(money(envelope.balance ?? 0, currency: model.currency))
+            .font(LumoType.cardAmount).monospacedDigit()
+            .foregroundStyle(LumoTheme.text)
+    }
+
+    private func allocation(_ envelope: Envelope, all: [Envelope]) -> some View {
+        Text(shareLabel(envelope, all: all))
+            .font(LumoType.caption).foregroundStyle(.secondary)
+    }
+
+    private func verticalMetrics(_ envelope: Envelope, all: [Envelope]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            amount(envelope).fixedSize(horizontal: false, vertical: true)
+            allocation(envelope, all: all).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var managementSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Управление").font(LumoType.section)
+                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                NavigationLink { PercentagesView() } label: {
+                    managementRow("Настроить доли", symbol: "slider.horizontal.3")
+                }
+                Divider().overlay(LumoTheme.separator).padding(.leading, 46)
+                NavigationLink { RebalanceView() } label: {
+                    managementRow("Перераспределить накопленное", symbol: "arrow.triangle.branch")
+                }
+                Divider().overlay(LumoTheme.separator).padding(.leading, 46)
+                NavigationLink { TransactionForm(initialKind: .envTransfer) } label: {
+                    managementRow("Перевести между конвертами", symbol: "arrow.left.arrow.right")
+                }
+            }
+            .buttonStyle(.plain)
+            .background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            Text("По конвертам распределяются карта и наличные. Криптовалюта и налоговый резерв учитываются отдельно.")
+                .font(LumoType.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func managementRow(_ title: String, symbol: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(LumoType.body).foregroundStyle(LumoTheme.accent)
+                .frame(width: 22).accessibilityHidden(true)
+            Text(title).font(LumoType.body)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(LumoType.caption).foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 14)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }
 

@@ -12,6 +12,7 @@ struct EnvelopeStrip: View {
 
     private let spacing: CGFloat = 10
     private let inset: CGFloat = 12
+    private let currencySpacing: CGFloat = 2
 
     var body: some View {
         Group {
@@ -25,6 +26,7 @@ struct EnvelopeStrip: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(accessibilityLabel(envelope))
+                        .accessibilityIdentifier("overview.envelope.\(envelope.id)")
                     }
                 }
             } else {
@@ -38,6 +40,7 @@ struct EnvelopeStrip: View {
                         .buttonStyle(.plain)
                         .frame(maxWidth: .infinity)
                         .accessibilityLabel(accessibilityLabel(envelope))
+                        .accessibilityIdentifier("overview.envelope.\(envelope.id)")
                     }
                 }
             }
@@ -71,11 +74,17 @@ struct EnvelopeStrip: View {
 
             Spacer(minLength: 0)
 
-            Text(money(envelope.balance ?? 0, currency: currency))
-                .font(LumoType.cardAmount)
-                .monospacedDigit()
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+            HStack(alignment: .firstTextBaseline, spacing: currencySpacing) {
+                Text(moneyNumber(envelope.balance ?? 0))
+                    .font(LumoType.cardAmount)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                Text(currencySymbol(currency))
+                    .font(LumoType.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(inset)
         .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
@@ -121,12 +130,18 @@ struct EnvelopeStrip: View {
         let traits = UITraitCollection(preferredContentSizeCategory: contentSizeCategory)
         let amountSize = UIFont.preferredFont(forTextStyle: .title3, compatibleWith: traits).pointSize
         let amountFont = UIFont.monospacedDigitSystemFont(ofSize: amountSize, weight: .medium)
+        let currencyFont = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits)
+        let currencyWidth = (currencySymbol(currency) as NSString)
+            .size(withAttributes: [.font: currencyFont]).width
         let labelSize = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits).pointSize
         let labelFont = UIFont.systemFont(ofSize: labelSize, weight: .medium)
 
         return envelopes.contains { envelope in
-            let amountWidth = (money(envelope.balance ?? 0, currency: currency) as NSString)
+            // Measure the same two baseline-aligned runs shown in the tile.
+            // The number keeps title3, including cents; only the currency is caption.
+            let numberWidth = (moneyNumber(envelope.balance ?? 0) as NSString)
                 .size(withAttributes: [.font: amountFont]).width
+            let amountWidth = numberWidth + currencySpacing + currencyWidth
             let nameWidth = (displayName(envelope) as NSString)
                 .size(withAttributes: [.font: labelFont]).width
             // Keep a small reserve for rounding and SwiftUI/UIKit font metrics.

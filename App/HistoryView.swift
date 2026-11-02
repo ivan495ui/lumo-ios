@@ -18,29 +18,69 @@ struct HistoryView: View {
         }
     }
     var body: some View {
-        List {
-            Section {
-                if !allTime { MonthSelector() }
-                Toggle("За всё время", isOn: $allTime)
-            }
-            Section {
-                Picker("Счёт", selection: $account) {
-                    Text("Все счета").tag("")
-                    ForEach(model.snapshot?.state.accounts ?? []) { Text($0.name).tag($0.id) }
+        let grouped = Dictionary(grouping: rows, by: \.date)
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 8) {
+                    if allTime { Text("За всё время").font(LumoType.section); Spacer() }
+                    else { MonthSelector() }
+                    filterMenu
                 }
-                Picker("Тип", selection: $type) {
-                    Text("Все операции").tag("")
-                    ForEach(TransactionKind.allCases) { Text($0.title).tag($0.rawValue) }
-                    Text("Перераспределение").tag("env_rebalance")
+                if !account.isEmpty || !type.isEmpty {
+                    HStack {
+                        Text(filterDescription).font(LumoType.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Сбросить") { account = ""; type = "" }.font(LumoType.caption).frame(minHeight: 44)
+                    }
                 }
-            }
-            Section {
                 if rows.isEmpty { EmptyLedger() }
-                ForEach(rows) { transaction in
-                    NavigationLink { TransactionDetail(transactionID: transaction.id) } label: { TransactionRow(transaction: transaction) }
+                ForEach(grouped.keys.sorted(by: >), id: \.self) { day in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(dayLabel(day)).font(LumoType.section)
+                        VStack(spacing: 0) {
+                            ForEach(grouped[day] ?? []) { transaction in
+                                NavigationLink { TransactionDetail(transactionID: transaction.id) } label: {
+                                    HStack(spacing: 8) {
+                                        TransactionRow(transaction: transaction, showsDate: false, compact: true)
+                                        Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+                                    }.padding(.horizontal, 14).padding(.vertical, 7)
+                                }.buttonStyle(.plain)
+                                if transaction.id != grouped[day]?.last?.id { Divider().padding(.leading, 61) }
+                            }
+                        }.background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
                 }
+            }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 24)
+        }.background(LumoTheme.background).searchable(text: $search, prompt: "Поиск по операциям")
+    }
+    private var filterMenu: some View {
+        Menu {
+            Picker("Период", selection: $allTime) { Text("По месяцам").tag(false); Text("За всё время").tag(true) }
+            Picker("Счёт", selection: $account) {
+                Text("Все счета").tag("")
+                ForEach(model.snapshot?.state.accounts ?? []) { Text($0.name).tag($0.id) }
             }
-        }.searchable(text: $search, prompt: "Комментарий, категория или счёт")
+            Picker("Тип", selection: $type) {
+                Text("Все операции").tag("")
+                ForEach(TransactionKind.allCases) { Text($0.title).tag($0.rawValue) }
+                Text("Перераспределение").tag("env_rebalance")
+            }
+        } label: {
+            Image(systemName: account.isEmpty && type.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                .font(.title3).frame(width: 44, height: 44)
+        }.accessibilityLabel("Фильтры истории")
+    }
+    private var filterDescription: String {
+        [account.isEmpty ? nil : model.accountName(account), type.isEmpty ? nil : TransactionKind(rawValue: type)?.title ?? "Перераспределение"]
+            .compactMap { $0 }.joined(separator: " · ")
+    }
+    private func dayLabel(_ key: String) -> String {
+        if key == WalletModel.dateKey(Date()) { return "Сегодня" }
+        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date()), key == WalletModel.dateKey(yesterday) { return "Вчера" }
+        let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX"); formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: key) else { return key }
+        formatter.locale = Locale(identifier: "ru_RU"); formatter.dateFormat = "d MMMM yyyy"
+        return formatter.string(from: date)
     }
 }
 
