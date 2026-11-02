@@ -4,19 +4,19 @@
 
 | Файл | Строк |
 |---|---:|
-| `.github/workflows/ios.yml` | 46 |
+| `.github/workflows/ios.yml` | 66 |
 | `App/AccountForms.swift` | 160 |
 | `App/AccountsView.swift` | 84 |
 | `App/AnalyticsView.swift` | 44 |
-| `App/Components.swift` | 105 |
+| `App/Components.swift` | 113 |
 | `App/EnvelopesView.swift` | 73 |
 | `App/HistoryView.swift` | 94 |
 | `App/LumoApp.swift` | 15 |
 | `App/OverviewView.swift` | 105 |
 | `App/RootView.swift` | 57 |
-| `App/SettingsView.swift` | 157 |
-| `App/TransactionForm.swift` | 191 |
-| `App/WalletModel.swift` | 152 |
+| `App/SettingsView.swift` | 159 |
+| `App/TransactionForm.swift` | 198 |
+| `App/WalletModel.swift` | 156 |
 | `Package.swift` | 13 |
 | `project.yml` | 55 |
 | `Sources/LumoCore/FinanceEngine.swift` | 64 |
@@ -27,7 +27,7 @@
 | `tests/LumoCoreTests/FinanceEngineTests.swift` | 87 |
 | `tools/bridge.js` | 46 |
 | `tools/bundle-engine.mjs` | 24 |
-| `tools/simulator-check.sh` | 26 |
+| `tools/simulator-check.sh` | 36 |
 | `UITests/LumoUITests.swift` | 42 |
 | `Vendor/Finance/commands.js` | 56 |
 | `Vendor/Finance/core.js` | 534 |

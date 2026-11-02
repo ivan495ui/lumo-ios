@@ -34,8 +34,20 @@ jobs:
           mkdir -p build/package/Payload
           cp -R build/device/Build/Products/Release-iphoneos/lumo.app build/package/Payload/
           cd build/package && zip -qry ../artifacts/lumo-unsigned.ipa Payload
-      - name: Fresh simulator and UI checks
-        run: bash tools/simulator-check.sh
+      - name: Verify device archive
+        run: python3 tools/verify-ipa.py build/artifacts/lumo-unsigned.ipa
+      - name: Build and launch fresh simulator
+        run: bash tools/simulator-check.sh prepare
+      - name: Upload first real preview
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lumo-early-preview
+          path: |
+            build/artifacts/lumo-overview.png
+            build/artifacts/lumo-unsigned.ipa
+          retention-days: 1
+      - name: Native UI checks
+        run: bash tools/simulator-check.sh test
       - name: Upload preview and logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -44,3 +56,11 @@ jobs:
           path: |
             build/artifacts/
           retention-days: 1
+      - name: Remove isolated simulator
+        if: always()
+        run: |
+          if [ -f build/sim-device.txt ]; then
+            device=$(cat build/sim-device.txt)
+            xcrun simctl shutdown "$device" || true
+            xcrun simctl delete "$device" || true
+          fi

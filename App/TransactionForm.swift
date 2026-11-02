@@ -35,7 +35,7 @@ struct TransactionForm: View {
             if existing == nil {
                 Section {
                     Picker("Операция", selection: Binding(get: { kind }, set: { value in
-                        kind = value; categoryID = ""; envelopeID = ""; toEnvelopeID = ""; taxable = false; fiatFlow = false
+                        kind = value; applyDefaults(); toEnvelopeID = ""; taxable = false; fiatFlow = false
                         if !assets.contains(where: { $0.id == assetID }) { assetID = assets.first?.id ?? "" }
                     })) { ForEach(TransactionKind.allCases) { Text($0.title).tag($0) } }
                 }
@@ -154,7 +154,9 @@ struct TransactionForm: View {
     private func save() {
         do {
             let draft = try draft()
-            let success = existing.map { model.mutate("updateTransaction", [$0.id, draft]) } ?? model.mutate("addTransaction", [draft])
+            let success: Bool
+            if let existing { success = model.mutate("updateTransaction", [existing.id, draft]) { localError = $0 } }
+            else { success = model.mutate("addTransaction", [draft]) { localError = $0 } }
             if success { dismiss() }
         } catch { localError = error.localizedDescription }
     }
@@ -174,6 +176,7 @@ struct TransactionForm: View {
         toAccountID = existing?.toAccountId ?? fiatAccounts.first { $0.id != accountID }?.id ?? ""
         categoryID = existing?.categoryId ?? ""
         envelopeID = existing?.envelopeId ?? ""
+        if existing == nil { applyDefaults() }
         toEnvelopeID = existing?.toEnvelopeId ?? ""
         assetID = existing?.assetId ?? assets.first { $0.accountId == initialAccountID }?.id ?? assets.first?.id ?? ""
         comment = existing?.comment ?? ""
@@ -187,5 +190,9 @@ struct TransactionForm: View {
             date = formatter.date(from: key) ?? Date()
         }
         initialized = true
+    }
+    private func applyDefaults() {
+        categoryID = categories.first { $0.id == (kind == .income ? "cat_income_other" : "cat_other") }?.id ?? ""
+        envelopeID = [.expense, .refund].contains(kind) ? (envelopes.first { $0.id == "env_personal" }?.id ?? envelopes.first?.id ?? "") : ""
     }
 }

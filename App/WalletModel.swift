@@ -47,7 +47,7 @@ final class WalletModel: ObservableObject {
     }
 
     @discardableResult
-    func mutate(_ operation: String, _ args: [Any] = []) -> Bool {
+    func mutate(_ operation: String, _ args: [Any] = [], failure: ((String) -> Void)? = nil) -> Bool {
         guard !recoveryRequired, let engine, let files else { return false }
         do {
             let previous = try engine.exportJSON()
@@ -61,7 +61,11 @@ final class WalletModel: ObservableObject {
                 try? engine.importJSON(previous)
                 throw error
             }
-        } catch { self.error = error.localizedDescription; return false }
+        } catch {
+            if let failure { failure(error.localizedDescription) }
+            else { self.error = error.localizedDescription }
+            return false
+        }
     }
 
     func changeMonth(_ delta: Int) {

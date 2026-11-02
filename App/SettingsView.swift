@@ -135,23 +135,25 @@ struct CategoryForm: View {
     @State private var kind = "expense"
     @State private var taxable = false
     @State private var deleting = false
+    @State private var localError: String?
     var body: some View {
         Form {
             TextField("Название", text: $name)
             Picker("Тип", selection: $kind) { Text("Расход").tag("expense"); Text("Доход").tag("income") }.disabled(category != nil)
             if kind == "income" { Toggle("Облагается налогом", isOn: $taxable) }
             if category != nil { Button("Удалить категорию", role: .destructive) { deleting = true } }
+            if let localError { Text(localError).foregroundStyle(.red) }
         }.navigationTitle(category == nil ? "Новая категория" : "Категория").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Готово") {
                     var args: [String: Any] = ["name": name.trimmingCharacters(in: .whitespacesAndNewlines), "kind": kind, "taxable": kind == "income" && taxable, "icon": category?.icon ?? "dots"]
                     if let category { args["id"] = category.id }
-                    if model.mutate("saveCategory", [args]) { dismiss() }
+                    if model.mutate("saveCategory", [args], failure: { localError = $0 }) { dismiss() }
                 }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
             }
             .onAppear { name = category?.name ?? ""; kind = category?.kind ?? "expense"; taxable = category?.taxable ?? false }
             .confirmationDialog("Удалить категорию?", isPresented: $deleting, titleVisibility: .visible) {
-                Button("Удалить", role: .destructive) { if let category, model.mutate("deleteCategory", [category.id]) { dismiss() } }
+                Button("Удалить", role: .destructive) { if let category, model.mutate("deleteCategory", [category.id], failure: { localError = $0 }) { dismiss() } }
             }
     }
 }

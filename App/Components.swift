@@ -67,7 +67,7 @@ struct TransactionRow: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(money(transaction.amount, currency: model.currency))
+                Text(amountLabel)
                     .foregroundStyle(transaction.isIncome ? Color.green : Color.primary).monospacedDigit()
                 if let qty = transaction.qty, qty != 0 {
                     Text(qty.formatted(.number.precision(.fractionLength(0...8))))
@@ -75,6 +75,14 @@ struct TransactionRow: View {
                 }
             }
         }.padding(.vertical, 4)
+    }
+    private var amountLabel: String {
+        let prefix: String
+        if ["income", "refund"].contains(transaction.type) { prefix = "+" }
+        else if ["expense", "tax_payment"].contains(transaction.type) { prefix = "−" }
+        else if transaction.type == "adjustment", transaction.amount > 0 { prefix = "+" }
+        else { prefix = "" }
+        return prefix + money(transaction.amount, currency: model.currency)
     }
 }
 

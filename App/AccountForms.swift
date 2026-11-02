@@ -30,7 +30,7 @@ struct AccountForm: View {
             }
             .onAppear { name = account?.name ?? ""; kind = account?.kind ?? "card"; opening = amountText(account?.opening ?? 0); archived = account?.archived ?? false }
             .confirmationDialog("Удалить счёт?", isPresented: $deleting, titleVisibility: .visible) {
-                Button("Удалить", role: .destructive) { if let account, model.mutate("deleteAccount", [account.id]) { dismiss() } }
+                Button("Удалить", role: .destructive) { if let account, model.mutate("deleteAccount", [account.id], failure: { localError = $0 }) { dismiss() } }
             }
     }
     private func save() {
@@ -39,7 +39,7 @@ struct AccountForm: View {
             guard !trimmed.isEmpty else { throw FinanceError.message("Напиши название счёта") }
             var args: [String: Any] = ["name": trimmed, "kind": kind, "opening": kind == "crypto" ? 0 : try model.cents(opening), "archived": archived, "color": account?.color ?? "#4690FF"]
             if let account { args["id"] = account.id }
-            if model.mutate("saveAccount", [args]) { dismiss() }
+            if model.mutate("saveAccount", [args], failure: { localError = $0 }) { dismiss() }
         } catch { localError = error.localizedDescription }
     }
 }
@@ -72,7 +72,7 @@ struct AssetForm: View {
             }
             .onAppear { symbol = asset?.symbol ?? ""; name = asset?.name ?? ""; quantity = String(asset?.qty ?? asset?.initialQty ?? 0); price = amountText(asset?.price ?? 0) }
             .confirmationDialog("Удалить актив?", isPresented: $deleting, titleVisibility: .visible) {
-                Button("Удалить", role: .destructive) { if let asset, model.mutate("deleteAsset", [accountID, asset.id]) { dismiss() } }
+                Button("Удалить", role: .destructive) { if let asset, model.mutate("deleteAsset", [accountID, asset.id], failure: { localError = $0 }) { dismiss() } }
             }
     }
     private func save() {
@@ -84,7 +84,7 @@ struct AssetForm: View {
             let initial = (asset?.initialQty ?? 0) + qty - (asset?.qty ?? asset?.initialQty ?? 0)
             var args: [String: Any] = ["symbol": ticker, "name": name.isEmpty ? ticker : name, "initialQty": initial, "price": cents]
             if let asset { args["id"] = asset.id }
-            if model.mutate("saveAsset", [accountID, args]) { dismiss() }
+            if model.mutate("saveAsset", [accountID, args], failure: { localError = $0 }) { dismiss() }
         } catch { localError = error.localizedDescription }
     }
 }
@@ -109,7 +109,7 @@ struct EnvelopeForm: View {
         do {
             let cents = try model.cents(goal)
             guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, cents >= 0 else { throw FinanceError.message("Проверь название и цель") }
-            if model.mutate("saveEnvelope", [["id": envelope.id, "name": name, "goal": cents]]) { dismiss() }
+            if model.mutate("saveEnvelope", [["id": envelope.id, "name": name, "goal": cents]], failure: { localError = $0 }) { dismiss() }
         } catch { localError = error.localizedDescription }
     }
 }
@@ -155,6 +155,6 @@ struct PercentagesView: View {
             guard let value = Double((percents[envelope.id] ?? "").replacingOccurrences(of: ",", with: ".")), value.isFinite else { localError = "Проверь проценты"; return }
             values[envelope.id] = value
         }
-        if model.mutate("setEnvelopePercents", [values]) { dismiss() }
+        if model.mutate("setEnvelopePercents", [values], failure: { localError = $0 }) { dismiss() }
     }
 }
