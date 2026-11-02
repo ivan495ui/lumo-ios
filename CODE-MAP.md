@@ -9,6 +9,7 @@
 | `App/AccountsView.swift` | 179 |
 | `App/AnalyticsView.swift` | 83 |
 | `App/Components.swift` | 194 |
+| `App/EnvelopeDecoration.swift` | 26 |
 | `App/EnvelopeStrip.swift` | 182 |
 | `App/EnvelopesView.swift` | 178 |
 | `App/HistoryView.swift` | 134 |

@@ -6,15 +6,15 @@ typealias LedgerCategory = LumoCore.Category
 
 /// Semantic system styles adapt to Dynamic Type; no bundled SF files or fixed tracking.
 enum LumoType {
-    static let balance = Font.largeTitle.weight(.semibold)
+    static let balance = Font.largeTitle.weight(.medium)
     static let pageTitle = Font.headline
     static let cardAmount = Font.title3.weight(.medium)
     static let section = Font.headline
     static let amount = Font.body.weight(.medium)
     static let body = Font.body
-    static let label = Font.body.weight(.medium)
+    static let label = Font.body
     static let caption = Font.caption
-    static let cardLabel = Font.caption.weight(.medium)
+    static let cardLabel = Font.footnote.weight(.medium)
 }
 
 struct BalanceValue: View {

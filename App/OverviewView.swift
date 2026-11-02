@@ -63,7 +63,7 @@ struct OverviewView: View {
         Button { quickKind = kind } label: {
             HStack(spacing: 6) {
                 Image(systemName: symbol).font(.body.weight(.semibold)).imageScale(.small)
-                Text(title).font(LumoType.label).fixedSize(horizontal: false, vertical: true)
+                Text(title).font(LumoType.label.weight(.medium)).fixedSize(horizontal: false, vertical: true)
             }.frame(maxWidth: .infinity, minHeight: 44)
                 .background(kind == .expense ? LumoTheme.actionPrimaryFill : LumoTheme.actionSecondaryFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }.buttonStyle(.plain)

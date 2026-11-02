@@ -82,7 +82,7 @@ struct EnvelopesView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LumoTheme.envelopeSurface(envelope), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(EnvelopeDecoration(envelope: envelope))
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 

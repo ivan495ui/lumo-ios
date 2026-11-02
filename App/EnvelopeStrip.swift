@@ -88,7 +88,7 @@ struct EnvelopeStrip: View {
         }
         .padding(inset)
         .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
-        .background(LumoTheme.envelopeSurface(envelope), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(EnvelopeDecoration(envelope: envelope))
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -117,7 +117,7 @@ struct EnvelopeStrip: View {
         }
         .padding(inset)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LumoTheme.envelopeSurface(envelope), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(EnvelopeDecoration(envelope: envelope))
         .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -133,7 +133,7 @@ struct EnvelopeStrip: View {
         let currencyFont = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits)
         let currencyWidth = (currencySymbol(currency) as NSString)
             .size(withAttributes: [.font: currencyFont]).width
-        let labelSize = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits).pointSize
+        let labelSize = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: traits).pointSize
         let labelFont = UIFont.systemFont(ofSize: labelSize, weight: .medium)
 
         return envelopes.contains { envelope in
