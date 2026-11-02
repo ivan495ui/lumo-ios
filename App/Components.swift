@@ -4,16 +4,17 @@ import LumoCore
 typealias LedgerTransaction = LumoCore.Transaction
 typealias LedgerCategory = LumoCore.Category
 
-/// Five text sizes at the standard Dynamic Type setting: 48 / 20 / 17 / 15 / 12.
+/// Semantic system styles adapt to Dynamic Type; no bundled SF files or fixed tracking.
 enum LumoType {
-    static let balance = Font.system(size: 48, weight: .light)
-    static let pageTitle = Font.title3.weight(.semibold)
+    static let balance = Font.largeTitle.weight(.semibold)
+    static let pageTitle = Font.headline
     static let cardAmount = Font.title3.weight(.medium)
     static let section = Font.headline
     static let amount = Font.body.weight(.medium)
-    static let body = Font.subheadline
-    static let label = Font.subheadline.weight(.medium)
+    static let body = Font.body
+    static let label = Font.body.weight(.medium)
     static let caption = Font.caption
+    static let cardLabel = Font.caption.weight(.medium)
 }
 
 struct BalanceValue: View {
@@ -24,7 +25,7 @@ struct BalanceValue: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 7) {
-            Text(moneyNumber(cents)).font(LumoType.balance).tracking(-1.6).foregroundStyle(LumoTheme.text)
+            Text(moneyNumber(cents)).font(LumoType.balance).foregroundStyle(LumoTheme.text)
                 .monospacedDigit().minimumScaleFactor(0.5).lineLimit(1)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)

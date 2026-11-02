@@ -16,6 +16,12 @@ final class LumoUITests: XCTestCase {
     }
     func testNativeTabsAndScreens() {
         XCTAssertTrue(app.staticTexts["overview.balance"].waitForExistence(timeout: 15))
+        let savings = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Накопления,")).firstMatch
+        XCTAssertTrue(savings.waitForExistence(timeout: 5))
+        let crypto = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Криптовалюта")).firstMatch
+        XCTAssertTrue(crypto.exists)
+        XCTAssertLessThanOrEqual(crypto.frame.maxY, app.tabBars.firstMatch.frame.minY + 1,
+            "All three accounts should be visible above the system tab bar")
         screenshot("01-overview")
         for (tab, filename) in [("Счета", "02-accounts"), ("Конверты", "03-envelopes"), ("Аналитика", "04-analytics"), ("История", "05-history")] {
             let button = app.tabBars.buttons[tab]

@@ -8,7 +8,7 @@
 | `App/AccountForms.swift` | 160 |
 | `App/AccountsView.swift` | 84 |
 | `App/AnalyticsView.swift` | 44 |
-| `App/Components.swift` | 153 |
+| `App/Components.swift` | 154 |
 | `App/EnvelopeStrip.swift` | 167 |
 | `App/EnvelopesView.swift` | 72 |
 | `App/HistoryView.swift` | 94 |
@@ -30,7 +30,7 @@
 | `tools/bridge.js` | 46 |
 | `tools/bundle-engine.mjs` | 24 |
 | `tools/simulator-check.sh` | 36 |
-| `UITests/LumoUITests.swift` | 43 |
+| `UITests/LumoUITests.swift` | 49 |
 | `Vendor/Finance/commands.js` | 56 |
 | `Vendor/Finance/core.js` | 534 |
 | `Vendor/Finance/schema.js` | 140 |

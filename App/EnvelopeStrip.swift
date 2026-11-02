@@ -66,7 +66,7 @@ struct EnvelopeStrip: View {
             .foregroundStyle(LumoTheme.envelopeAccent(envelope))
 
             Text(displayName(envelope))
-                .font(LumoType.label)
+                .font(LumoType.cardLabel)
                 .lineLimit(1)
 
             Spacer(minLength: 0)
@@ -121,7 +121,7 @@ struct EnvelopeStrip: View {
         let traits = UITraitCollection(preferredContentSizeCategory: contentSizeCategory)
         let amountSize = UIFont.preferredFont(forTextStyle: .title3, compatibleWith: traits).pointSize
         let amountFont = UIFont.monospacedDigitSystemFont(ofSize: amountSize, weight: .medium)
-        let labelSize = UIFont.preferredFont(forTextStyle: .subheadline, compatibleWith: traits).pointSize
+        let labelSize = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits).pointSize
         let labelFont = UIFont.systemFont(ofSize: labelSize, weight: .medium)
 
         return envelopes.contains { envelope in
