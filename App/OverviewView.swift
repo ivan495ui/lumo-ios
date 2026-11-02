@@ -61,11 +61,25 @@ struct OverviewView: View {
 
     private func quickButton(_ title: String, symbol: String, kind: TransactionKind) -> some View {
         Button { quickKind = kind } label: {
-            HStack(spacing: 6) {
-                Image(systemName: symbol).font(.body.weight(.semibold)).imageScale(.small)
-                Text(title).font(LumoType.label.weight(.medium)).fixedSize(horizontal: false, vertical: true)
-            }.frame(maxWidth: .infinity, minHeight: 44)
-                .background(kind == .expense ? LumoTheme.actionPrimaryFill : LumoTheme.actionSecondaryFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            Group {
+                if dynamicTypeSize > .large {
+                    Label(title, systemImage: symbol)
+                        .font(LumoType.label.weight(.medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, minHeight: 28)
+                        .padding(14)
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: symbol).font(.title3.weight(.medium))
+                            .frame(height: 20)
+                        Text(title).font(LumoType.label.weight(.medium))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, minHeight: 66)
+                }
+            }
+            .background(kind == .expense ? LumoTheme.actionPrimaryFill : LumoTheme.actionSecondaryFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }.buttonStyle(.plain)
             .foregroundStyle(kind == .expense ? LumoTheme.actionPrimaryText : LumoTheme.text)
             .accessibilityLabel(title)

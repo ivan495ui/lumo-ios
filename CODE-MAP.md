@@ -15,7 +15,7 @@
 | `App/HistoryView.swift` | 134 |
 | `App/LumoApp.swift` | 26 |
 | `App/LumoTheme.swift` | 57 |
-| `App/OverviewView.swift` | 141 |
+| `App/OverviewView.swift` | 155 |
 | `App/RootView.swift` | 66 |
 | `App/SettingsView.swift` | 163 |
 | `App/TransactionForm.swift` | 198 |
@@ -31,7 +31,7 @@
 | `tools/bridge.js` | 46 |
 | `tools/bundle-engine.mjs` | 24 |
 | `tools/simulator-check.sh` | 36 |
-| `UITests/LumoUITests.swift` | 65 |
+| `UITests/LumoUITests.swift` | 66 |
 | `Vendor/Finance/commands.js` | 56 |
 | `Vendor/Finance/core.js` | 534 |
 | `Vendor/Finance/schema.js` | 140 |

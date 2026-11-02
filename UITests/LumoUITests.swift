@@ -16,6 +16,7 @@ final class LumoUITests: XCTestCase {
     }
     func testNativeTabsAndScreens() {
         XCTAssertTrue(app.staticTexts["overview.balance"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["Добавить операцию"].exists)
         screenshot("01-overview")
         let savings = app.buttons["overview.envelope.env_savings"]
         XCTAssertTrue(savings.waitForExistence(timeout: 5))
@@ -29,7 +30,7 @@ final class LumoUITests: XCTestCase {
             screenshot(filename)
         }
         app.tabBars.buttons["Обзор"].tap()
-        app.buttons["Расход"].tap()
+        app.buttons["Добавить операцию"].tap()
         XCTAssertTrue(app.textFields["transaction.amount"].waitForExistence(timeout: 3))
         screenshot("06-transaction-form")
     }

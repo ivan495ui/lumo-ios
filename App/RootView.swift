@@ -14,7 +14,7 @@ struct RootView: View {
                 }
             } else if model.snapshot != nil {
                 TabView {
-                    Tab("Обзор", systemImage: "house.fill") { WalletPage(title: "lumo", showsAddButton: false) { OverviewView() } }
+                    Tab("Обзор", systemImage: "house.fill") { WalletPage(title: "lumo") { OverviewView() } }
                     Tab("Счета", systemImage: "creditcard.fill") { WalletPage(title: "Счета") { AccountsView() } }
                     Tab("Конверты", systemImage: "square.stack.3d.up.fill") { WalletPage(title: "Конверты") { EnvelopesView() } }
                     Tab("Аналитика", systemImage: "chart.bar.xaxis") { WalletPage(title: "Аналитика") { AnalyticsView() } }
