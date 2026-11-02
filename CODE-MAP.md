@@ -27,7 +27,7 @@
 | `tests/LumoCoreTests/FinanceEngineTests.swift` | 87 |
 | `tools/bridge.js` | 46 |
 | `tools/bundle-engine.mjs` | 24 |
-| `tools/simulator-check.sh` | 18 |
+| `tools/simulator-check.sh` | 26 |
 | `UITests/LumoUITests.swift` | 42 |
 | `Vendor/Finance/commands.js` | 56 |
 | `Vendor/Finance/core.js` | 534 |
