@@ -34,9 +34,9 @@ struct EnvelopesView: View {
                     }
                 }
                 Section {
-                    NavigationLink("Настроить доли", systemImage: "slider.horizontal.3") { PercentagesView() }
-                    NavigationLink("Перераспределить накопленное", systemImage: "arrow.triangle.branch") { RebalanceView() }
-                    NavigationLink("Перевести между конвертами", systemImage: "arrow.left.arrow.right") { TransactionForm(initialKind: .envTransfer) }
+                    NavigationLink { PercentagesView() } label: { Label("Настроить доли", systemImage: "slider.horizontal.3") }
+                    NavigationLink { RebalanceView() } label: { Label("Перераспределить накопленное", systemImage: "arrow.triangle.branch") }
+                    NavigationLink { TransactionForm(initialKind: .envTransfer) } label: { Label("Перевести между конвертами", systemImage: "arrow.left.arrow.right") }
                 } footer: { Text("Карта и наличные распределяются по конвертам. Криптовалюта и налоговый резерв считаются отдельно.") }
             }
         }

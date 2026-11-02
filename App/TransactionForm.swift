@@ -28,7 +28,7 @@ struct TransactionForm: View {
     private var fiatAccounts: [Account] { (model.snapshot?.state.accounts ?? []).filter { $0.kind != "crypto" && (!$0.archived || $0.id == existing?.accountId || $0.id == existing?.toAccountId) } }
     private var assets: [Asset] { model.snapshot?.derived.cryptoAssets ?? [] }
     private var envelopes: [Envelope] { model.snapshot?.state.envelopes ?? [] }
-    private var categories: [Category] { (model.snapshot?.state.categories ?? []).filter { $0.kind == (kind == .income ? "income" : "expense") } }
+    private var categories: [LedgerCategory] { (model.snapshot?.state.categories ?? []).filter { $0.kind == (kind == .income ? "income" : "expense") } }
 
     var body: some View {
         Form {

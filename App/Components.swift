@@ -2,6 +2,7 @@ import SwiftUI
 import LumoCore
 
 typealias LedgerTransaction = LumoCore.Transaction
+typealias LedgerCategory = LumoCore.Category
 
 extension Color {
     init(hex: String) {

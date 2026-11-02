@@ -8,7 +8,7 @@
 | `App/AccountForms.swift` | 160 |
 | `App/AccountsView.swift` | 84 |
 | `App/AnalyticsView.swift` | 44 |
-| `App/Components.swift` | 104 |
+| `App/Components.swift` | 105 |
 | `App/EnvelopesView.swift` | 73 |
 | `App/HistoryView.swift` | 94 |
 | `App/LumoApp.swift` | 15 |

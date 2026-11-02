@@ -130,7 +130,7 @@ struct CategoriesView: View {
 struct CategoryForm: View {
     @EnvironmentObject var model: WalletModel
     @Environment(\.dismiss) private var dismiss
-    var category: Category?
+    var category: LedgerCategory?
     @State private var name = ""
     @State private var kind = "expense"
     @State private var taxable = false
