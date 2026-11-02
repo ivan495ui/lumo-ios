@@ -1,0 +1,46 @@
+name: Native iOS preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lumo-native-preview
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event.repository.private == false
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+      - name: Verify native transport
+        run: |
+          node tools/bundle-engine.mjs
+          git diff --exit-code -- Sources/LumoCore/Resources/finance-engine.js engine-manifest.json Vendor/Finance
+          node --test tests/bridge.test.mjs
+          swift test
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build device application
+        run: |
+          set -o pipefail
+          mkdir -p build/artifacts
+          xcodebuild -project lumo.xcodeproj -scheme lumo -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build/artifacts/device-build.log
+          mkdir -p build/package/Payload
+          cp -R build/device/Build/Products/Release-iphoneos/lumo.app build/package/Payload/
+          cd build/package && zip -qry ../artifacts/lumo-unsigned.ipa Payload
+      - name: Fresh simulator and UI checks
+        run: bash tools/simulator-check.sh
+      - name: Upload preview and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: lumo-native-preview
+          path: |
+            build/artifacts/
+          retention-days: 1

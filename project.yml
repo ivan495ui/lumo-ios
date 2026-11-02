@@ -1,0 +1,55 @@
+name: lumo
+options:
+  bundleIdPrefix: app.lumo
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  LumoCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_ALLOWED: NO
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: "2.0"
+    TARGETED_DEVICE_FAMILY: "1"
+targets:
+  lumo:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: LumoCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lumo.wallet
+        PRODUCT_NAME: lumo
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: lumo
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.finance
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+  LumoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: lumo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lumo.wallet.uitests
+schemes:
+  lumo:
+    build:
+      targets:
+        lumo: all
+        LumoUITests: [test]
+    test:
+      targets: [LumoUITests]
