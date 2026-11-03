@@ -19,7 +19,7 @@ struct AccountForm: View {
                 if account == nil {
                     Picker("Тип", selection: $kind) { Text("Карта").tag("card"); Text("Наличные").tag("cash"); Text("Криптовалюта").tag("crypto") }
                 }
-                if kind != "crypto" { TextField("Стартовый остаток", text: $opening).keyboardType(.numbersAndPunctuation) }
+                if kind != "crypto" { TextField("Стартовый остаток, \(model.currency)", text: $opening).keyboardType(.numbersAndPunctuation) }
                 if account != nil { Toggle("Скрыть счёт", isOn: $archived) }
             } footer: { Text("Стартовый остаток — сумма до первой операции. Для изменения сегодняшнего баланса добавь корректировку.") }
             if account != nil { Section { Button("Удалить счёт", role: .destructive) { deleting = true } } }
@@ -184,7 +184,7 @@ struct AssetQuantityCorrectionView: View {
             if let localError { Text(localError).foregroundStyle(.red) }
         }
         .navigationTitle("Исправить количество").navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Записать") { save() }.disabled(asset == nil) } }
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Записать") { save() }.disabled(asset == nil).accessibilityIdentifier("asset.correction.save") } }
         .onAppear {
             guard !initialized, let asset else { return }
             quantity = cryptoQuantityText(asset.qty ?? 0)

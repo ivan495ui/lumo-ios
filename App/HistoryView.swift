@@ -99,7 +99,14 @@ struct TransactionDetail: View {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(transaction.label, systemImage: transaction.symbol).foregroundStyle(.secondary)
-                        BalanceValue(cents: transaction.amount, currency: model.currency, presentation: model.displayValue(transaction.amount), sign: transaction.moneySign)
+                        if ["crypto_buy", "crypto_sell", "crypto_spend"].contains(transaction.type) {
+                            Text(model.cryptoQuantity(transaction)).font(LumoType.balance).monospacedDigit()
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(transaction.amount == 0 ? "Оценка не указана" : "\(transaction.accountId == nil ? "Оценка записи" : transaction.type == "crypto_buy" ? "Оплачено" : "Получено"): \(transaction.accountId == nil ? model.estimatedMoney(transaction.amount) : model.displayMoney(transaction.amount))")
+                                .font(LumoType.body).foregroundStyle(.secondary)
+                        } else {
+                            BalanceValue(cents: transaction.amount, currency: model.currency, presentation: model.displayValue(transaction.amount), sign: transaction.moneySign)
+                        }
                         if model.effectiveDisplayCurrency != model.currency {
                             Text("В учёте: \(money(transaction.amount, currency: model.currency))").font(.footnote).foregroundStyle(.secondary)
                         }
@@ -118,6 +125,21 @@ struct TransactionDetail: View {
                         ForEach(alloc.keys.sorted(), id: \.self) { id in
                             LabeledContent(model.envelopeName(id) ?? id, value: model.displayMoney(alloc[id] ?? 0))
                         }
+                    }
+                }
+                if transaction.type == "expense", transaction.envelopeId == nil {
+                    Section("Из чего оплачен расход") {
+                        let coverage = model.expenseCoverage(transaction.id)
+                        let used = coverage.reduce(into: [String: Int]()) { values, entry in
+                            for (id, delta) in entry.alloc ?? [:] { values[id, default: 0] += max(0, -delta) }
+                        }
+                        ForEach(used.keys.sorted(), id: \.self) { id in
+                            LabeledContent(model.envelopeName(id) ?? id, value: money(used[id] ?? 0, currency: model.currency))
+                        }
+                        let free = transaction.amount - used.values.reduce(0, +)
+                        if free > 0 { LabeledContent("Свободные деньги", value: money(free, currency: model.currency)) }
+                        Text("Точное покрытие в \(model.currency). При изменении или удалении расхода оно пересчитывается вместе с ним.")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 if let tax = transaction.taxAccrued, tax > 0 {

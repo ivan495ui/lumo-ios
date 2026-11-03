@@ -70,7 +70,7 @@ struct CryptoAccountView: View {
                 if assets.allSatisfy({ $0.price == 0 }) && unpriced {
                     Text("Укажи курс для оценки").font(LumoType.body).foregroundStyle(.secondary)
                 } else {
-                    Text("\(unpriced ? "Частичная оценка " : "")≈ \(model.displayMoney(account.balance ?? 0))")
+                    Text("\(unpriced ? "Частичная оценка " : "")\(model.estimatedMoney(account.balance ?? 0))")
                         .font(LumoType.cardAmount).monospacedDigit().foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -113,10 +113,10 @@ struct CryptoAccountView: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(LumoType.caption).foregroundStyle(.secondary).accessibilityHidden(true)
             }
-            Text(asset.price == 0 ? "Нет оценки · укажи курс" : "≈ \(model.displayMoney(asset.value ?? 0))")
+            Text(asset.price == 0 ? "Нет оценки · укажи курс" : model.estimatedMoney(asset.value ?? 0))
                 .font(LumoType.body).foregroundStyle(.secondary)
             if asset.price > 0 {
-                Text("Ручной курс: 1 \(asset.symbol) ≈ \(model.displayMoney(asset.price))")
+                Text("Ручной курс: 1 \(asset.symbol) \(model.estimatedMoney(asset.price))")
                     .font(LumoType.caption).foregroundStyle(.secondary)
             }
             if let date = rateDate(asset.updatedAt) {
@@ -145,7 +145,7 @@ struct CryptoAccountView: View {
                                     Text("\(transaction.type == "crypto_buy" ? "+" : "−")\(cryptoQuantityText(qty)) \(asset.symbol)")
                                         .font(LumoType.amount).monospacedDigit()
                                 }
-                                Text("Оценка записи: \(model.displayMoney(transaction.amount))")
+                                Text("\(transaction.accountId == nil ? "Оценка записи" : transaction.type == "crypto_sell" ? "Получено" : "Оплачено"): \(model.displayMoney(transaction.amount))")
                                     .font(LumoType.caption).foregroundStyle(.secondary)
                             }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                         }.buttonStyle(.plain)

@@ -127,6 +127,10 @@ struct EnvelopesView: View {
                 NavigationLink { TransactionForm(initialKind: .envTransfer) } label: {
                     managementRow("Перевести между конвертами", symbol: "arrow.left.arrow.right")
                 }
+                Divider().overlay(LumoTheme.separator).padding(.leading, 46)
+                NavigationLink { ReleaseEnvelopeFundsView() } label: {
+                    managementRow("Освободить часть денег", symbol: "arrow.up.bin")
+                }
             }
             .buttonStyle(.plain)
             .background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))

@@ -38,7 +38,7 @@ function validatePercents(envelopes) {
   }
 }
 
-export function createStore({ storage, key = STORAGE_KEY } = {}) {
+export function createStore({ storage, key = STORAGE_KEY, strictEnvelopeBalances = false } = {}) {
   const backend = storage || (typeof localStorage !== 'undefined' ? localStorage : new MemoryStorage());
   const listeners = new Set();
   let state = load();
@@ -99,13 +99,116 @@ export function createStore({ storage, key = STORAGE_KEY } = {}) {
     mutator(next);
     // Imports may contain an old negative holding. Keep that history readable,
     // but never create a new deficit or deepen an existing one during a mutation.
-    const previousQty = new Map(computeState(state).cryptoAssets.map((asset) => [asset.id, asset.qty]));
-    for (const asset of computeState(next).cryptoAssets) {
+    const before = computeState(state);
+    const after = computeState(next);
+    const previousQty = new Map(before.cryptoAssets.map((asset) => [asset.id, asset.qty]));
+    for (const asset of after.cryptoAssets) {
       if (asset.qty < Math.min(0, previousQty.get(asset.id) ?? 0)) {
         throw new Error(`Изменение оставит отрицательный остаток ${asset.symbol}. Сначала исправьте связанные операции.`);
       }
     }
+    if (strictEnvelopeBalances) {
+      const balances = new Map(before.envelopes.map((envelope) => [envelope.id, envelope.balance]));
+      for (const envelope of after.envelopes) {
+        if (envelope.balance < Math.min(0, balances.get(envelope.id) ?? 0)) {
+          throw new Error(`В конверте «${envelope.name}» не хватает денег. Выберите «Из всех денег» или измените сумму.`);
+        }
+      }
+      if (after.unallocated < Math.min(0, before.unallocated)) {
+        throw new Error('Не хватает свободных денег. Выберите «Из всех денег» или уменьшите сумму.');
+      }
+      if (after.available < Math.min(0, before.available)) {
+        throw new Error('Не хватает денег без налогового резерва. Уменьшите сумму или сначала исправьте связанные операции.');
+      }
+      const accounts = new Map(before.accounts.filter((account) => account.kind !== 'crypto').map((account) => [account.id, account.balance]));
+      for (const account of after.accounts.filter((value) => value.kind !== 'crypto')) {
+        if (account.balance < Math.min(0, accounts.get(account.id) ?? 0)) {
+          throw new Error(`На счёте «${account.name}» недостаточно денег. Выберите другой счёт или сначала запишите перевод.`);
+        }
+      }
+    }
     return commit(next);
+  }
+
+  // Largest remainder allocation in integer minor units. No donor can be
+  // overdrawn; stable array order breaks ties for a one-cent remainder.
+  function proportionalCoverage(amount, donors) {
+    const total = donors.reduce((sum, donor) => sum + donor.balance, 0);
+    if (amount > total) throw new Error('Для покрытия расхода не хватает денег в конвертах');
+    if (!amount) return {};
+    const denominator = BigInt(total);
+    const rows = donors.map((donor, index) => {
+      const numerator = BigInt(amount) * BigInt(donor.balance);
+      return { id: donor.id, index, cents: Number(numerator / denominator), remainder: numerator % denominator };
+    });
+    let rest = amount - rows.reduce((sum, row) => sum + row.cents, 0);
+    for (const row of [...rows].sort((a, b) => a.remainder === b.remainder ? a.index - b.index : a.remainder > b.remainder ? -1 : 1)) {
+      if (rest-- <= 0) break;
+      row.cents++;
+    }
+    return Object.fromEntries(rows.filter((row) => row.cents).map((row) => [row.id, -row.cents]));
+  }
+
+  function expensePlan(draft, existingID = null, options = {}) {
+    const current = existingID ? state.transactions.find((t) => t.id === existingID) : null;
+    if (existingID && (!current || current.type !== TYPE.EXPENSE)) throw new Error('Расход не найден');
+    const mode = options.mode || (draft.envelopeId ? 'envelope' : 'smart');
+    if (!['smart', 'free', 'envelope'].includes(mode)) throw new Error('Выберите способ оплаты расхода');
+    const baseState = clone(state);
+    baseState.transactions = baseState.transactions.filter((t) => !existingID || (t.id !== existingID && t.coverageFor !== existingID));
+    const base = normalizeDraft({ ...current, ...draft, type: TYPE.EXPENSE,
+      id: current?.id || '__expense_preview__', createdAt: current?.createdAt || '__preview__',
+      envelopeId: mode === 'envelope' ? draft.envelopeId : null });
+    const prepared = prepareTransaction(baseState, base, current);
+    const errors = validateTransaction(baseState, prepared);
+    if (errors.length) throw new ValidationError(errors);
+    if (mode === 'envelope' && !prepared.envelopeId) throw new Error('Выберите конверт');
+    const before = computeState(baseState);
+    const oldCoverage = current ? state.transactions.filter((t) => t.coverageFor === current.id) : [];
+    const oldMode = current?.envelopeId ? 'envelope' : oldCoverage.length ? 'smart' : 'free';
+    const sameFunding = current && mode === oldMode && prepared.amount === current.amount &&
+      prepared.accountId === current.accountId && prepared.envelopeId === current.envelopeId;
+    if (!sameFunding && prepared.amount > Math.max(0, before.available)) throw new Error('Для этого расхода не хватает денег без налогового резерва');
+    if (!sameFunding && prepared.amount > Math.max(0, before.accounts.find((account) => account.id === prepared.accountId)?.balance || 0)) {
+      throw new Error('На выбранном счёте недостаточно денег. Выберите другой счёт или сначала запишите перевод.');
+    }
+    let coverage = [];
+    if (sameFunding) {
+      coverage = oldCoverage.map((t) => ({ ...clone(t), date: prepared.date }));
+    } else if (mode === 'smart') {
+      const freeUsed = Math.min(prepared.amount, Math.max(0, before.unallocated));
+      const needed = prepared.amount - freeUsed;
+      if (needed) {
+        const alloc = proportionalCoverage(needed, before.envelopes.filter((envelope) => envelope.balance > 0));
+        coverage.push({ id: '__coverage_preview__', type: TYPE.ENV_REBALANCE, amount: 0, date: prepared.date,
+          alloc, coverageFor: prepared.id, comment: 'Покрытие расхода из конвертов', createdAt: '__preview__' });
+      }
+    } else if (mode === 'free' && prepared.amount > Math.max(0, before.unallocated)) {
+      throw new Error('Свободных денег не хватает. Выберите «Из всех денег» для покрытия из конвертов.');
+    } else if (mode === 'envelope' && prepared.amount > (before.envelopes.find((e) => e.id === prepared.envelopeId)?.balance || 0)) {
+      throw new Error('В выбранном конверте не хватает денег. Выберите «Из всех денег» для покрытия из остальных.');
+    }
+    const after = computeState({ ...baseState, transactions: [...baseState.transactions, ...coverage, prepared] });
+    const rows = before.envelopes.map((envelope) => {
+      const balance = after.envelopes.find((e) => e.id === envelope.id).balance;
+      return { id: envelope.id, name: envelope.name, before: envelope.balance,
+        used: envelope.balance - balance, after: balance };
+    });
+    const fingerprint = JSON.stringify([state, draft, existingID || null, mode]);
+    return { baseState, prepared, coverage, preview: { amount: prepared.amount, mode, rows,
+      freeBefore: before.unallocated, freeAfter: after.unallocated,
+      freeUsed: Math.max(0, before.unallocated - after.unallocated), fingerprint } };
+  }
+
+  function releasePlan(amount) {
+    if (!Number.isSafeInteger(amount) || amount <= 0) throw new Error('Укажите положительную сумму для освобождения');
+    const before = computeState(state);
+    if (amount > Math.max(0, before.available)) throw new Error('Не хватает денег без налогового резерва');
+    const alloc = proportionalCoverage(amount, before.envelopes.filter((envelope) => envelope.balance > 0));
+    const rows = before.envelopes.map((envelope) => ({ id: envelope.id, name: envelope.name,
+      before: envelope.balance, used: -(alloc[envelope.id] || 0), after: envelope.balance + (alloc[envelope.id] || 0) }));
+    return { alloc, preview: { amount, mode: 'release', rows, freeBefore: before.unallocated,
+      freeAfter: before.unallocated + amount, freeUsed: 0, fingerprint: JSON.stringify([state, amount, 'release']) } };
   }
 
   function normalizeDraft(draft) {
@@ -143,6 +246,10 @@ export function createStore({ storage, key = STORAGE_KEY } = {}) {
     updateTransaction(id, draft) {
       const current = state.transactions.find((t) => t.id === id);
       if (!current) throw new Error('Операция не найдена');
+      if (strictEnvelopeBalances && current.coverageFor) throw new Error('Покрытие связано с расходом. Измените сам расход.');
+      if (strictEnvelopeBalances && state.transactions.some((t) => t.coverageFor === id)) {
+        throw new Error('Для изменения этого расхода используйте предпросмотр покрытия.');
+      }
       const base = normalizeDraft({ ...current, ...draft, id });
       // налогооблагаемость берём из категории, если её не задали явно в форме
       if (!Object.prototype.hasOwnProperty.call(draft, 'taxable')) delete base.taxable;
@@ -159,7 +266,39 @@ export function createStore({ storage, key = STORAGE_KEY } = {}) {
     },
 
     deleteTransaction(id) {
-      update((s) => { s.transactions = s.transactions.filter((t) => t.id !== id); });
+      if (strictEnvelopeBalances && state.transactions.find((t) => t.id === id)?.coverageFor) {
+        throw new Error('Покрытие связано с расходом. Удалите сам расход.');
+      }
+      update((s) => { s.transactions = s.transactions.filter((t) => t.id !== id && (!strictEnvelopeBalances || t.coverageFor !== id)); });
+    },
+
+    previewExpense(draft, existingID = null, options = {}) {
+      return expensePlan(draft, existingID, options).preview;
+    },
+
+    saveExpense(draft, existingID = null, options = {}, fingerprint) {
+      const plan = expensePlan(draft, existingID, options);
+      if (plan.preview.fingerprint !== fingerprint) throw new Error('Суммы изменились. Проверьте покрытие расхода ещё раз.');
+      const id = existingID || makeId('tx');
+      const now = new Date().toISOString();
+      const expense = { ...plan.prepared, id, createdAt: existingID ? plan.prepared.createdAt : now,
+        ...(existingID ? { updatedAt: now } : {}) };
+      const coverage = plan.coverage.map((t) => ({ ...t,
+        id: t.id === '__coverage_preview__' ? makeId('tx') : t.id, coverageFor: id,
+        createdAt: t.createdAt === '__preview__' ? now : t.createdAt }));
+      update((s) => { s.transactions = [...plan.baseState.transactions, ...coverage, expense]; });
+      return expense;
+    },
+
+    previewRelease(amount) { return releasePlan(amount).preview; },
+
+    releaseEnvelopeFunds(amount, fingerprint) {
+      const plan = releasePlan(amount);
+      if (plan.preview.fingerprint !== fingerprint) throw new Error('Суммы изменились. Проверьте освобождение денег ещё раз.');
+      const transaction = { id: makeId('tx'), type: TYPE.ENV_REBALANCE, amount: 0, date: isoToday(),
+        alloc: plan.alloc, comment: 'Освобождение денег из конвертов', createdAt: new Date().toISOString() };
+      update((s) => { s.transactions.push(transaction); });
+      return transaction;
     },
 
     setReserved(id, reserved) {

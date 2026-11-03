@@ -73,6 +73,14 @@ export function migrate(raw) {
   }
 
   state.version = SCHEMA_VERSION;
+  // Optional linkage never changes v2 financial event semantics. Invalid links
+  // stay visible as ordinary events instead of hiding or deleting history.
+  const expenseIds = new Set(state.transactions.filter((t) => t.type === 'expense').map((t) => t.id));
+  for (const transaction of state.transactions) {
+    if (transaction.coverageFor && (transaction.type !== 'env_rebalance' || !expenseIds.has(transaction.coverageFor))) {
+      delete transaction.coverageFor;
+    }
+  }
   return state;
 }
 
@@ -131,6 +139,7 @@ function normalizeTx(t) {
     reserved: t.reserved !== false,
     createdAt: t.createdAt || new Date().toISOString(),
     updatedAt: t.updatedAt || null,
+    ...(typeof t.coverageFor === 'string' && t.coverageFor ? { coverageFor: t.coverageFor } : {}),
   };
 }
 

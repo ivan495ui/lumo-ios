@@ -65,12 +65,18 @@ final class AutomaticBackup: ObservableObject {
     func configure(folder: URL, password: String, initialJSON: String) async throws {
         guard !isWorking else { throw BackupServiceError.message("Дождись текущего копирования.") }
         guard !configured else { throw BackupServiceError.message("Сначала отключи прежнюю папку. Её копии останутся на месте.") }
-        guard password.count >= 10 else { throw BackupServiceError.message("Нужен пароль не короче 10 символов.") }
+        guard password.count >= ProtectedBackup.minimumPasswordLength else { throw ProtectedBackup.Error.passwordTooShort }
+        guard password.utf8.count <= ProtectedBackup.maximumPasswordUTF8Bytes else { throw ProtectedBackup.Error.passwordTooLong }
         if let setupError { throw BackupServiceError.message(setupError) }
         isWorking = true
         defer { if worker == nil { isWorking = false } }
         let accessed = folder.startAccessingSecurityScopedResource()
         defer { if accessed { folder.stopAccessingSecurityScopedResource() } }
+        let selectedPath = folder.standardizedFileURL.resolvingSymlinksInPath().path
+        let containerPath = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true).standardizedFileURL.resolvingSymlinksInPath().path
+        guard selectedPath != containerPath, !selectedPath.hasPrefix(containerPath + "/") else {
+            throw BackupServiceError.message("Выбери папку вне самого lumo — например, в iCloud Drive. Копия внутри приложения не защитит от его удаления.")
+        }
         let bookmark = try folder.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
         // Authenticate an existing copy before accepting a new configuration.
         try await Self.writer.validateExisting(folder: folder, password: password, namespace: namespace)

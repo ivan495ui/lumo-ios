@@ -87,6 +87,7 @@ public struct Transaction: Decodable, Identifiable {
     public let taxable: Bool?
     public let reserved: Bool?
     public let createdAt: String?
+    public let coverageFor: String?
     public var label: String { TransactionKind(rawValue: type)?.title ?? "Распределение" }
     public var symbol: String { TransactionKind(rawValue: type)?.symbol ?? "arrow.triangle.branch" }
     public var isIncome: Bool { ["income", "refund", "crypto_buy"].contains(type) }
@@ -183,4 +184,22 @@ public struct RebalanceRow: Decodable, Identifiable {
 public struct PreparedTransaction: Decodable {
     public let taxAccrued: Int?
     public let alloc: [String: Int]?
+}
+
+public struct ExpenseCoveragePreview: Decodable {
+    public let amount: Int
+    public let mode: String
+    public let rows: [ExpenseFundingRow]
+    public let freeBefore: Int
+    public let freeAfter: Int
+    public let freeUsed: Int
+    public let fingerprint: String
+}
+
+public struct ExpenseFundingRow: Decodable, Identifiable {
+    public let id: String
+    public let name: String
+    public let before: Int
+    public let used: Int
+    public let after: Int
 }

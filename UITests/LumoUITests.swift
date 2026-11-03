@@ -46,7 +46,6 @@ final class LumoUITests: XCTestCase {
         let amount = app.textFields["transaction.amount"]
         XCTAssertTrue(amount.waitForExistence(timeout: 10))
         amount.tap(); amount.typeText("12.34")
-        tapPicker("transaction.envelope", choice: "Личные расходы")
         let comment = app.textViews.firstMatch
         if comment.exists { comment.tap(); comment.typeText("Native UI test") }
         app.navigationBars.buttons["Готово"].tap()
@@ -122,7 +121,7 @@ final class LumoUITests: XCTestCase {
 
         openCryptoAccount()
         app.buttons["crypto.withdraw"].tap()
-        tapPicker("crypto.fiatAccount", choice: "Карта")
+        tapPicker("crypto.fiatAccount", choice: "Банковская карта")
         replaceText(in: app.textFields["crypto.quantity"], with: "1")
         replaceText(in: app.textFields["crypto.amount"], with: "3.21")
         app.buttons["crypto.save"].tap()
@@ -166,6 +165,39 @@ final class LumoUITests: XCTestCase {
         screenshot("11-rounded-envelope-exact-ledger")
     }
 
+    func testPrivacyShieldReleasesPresentedSettingsAfterBackground() {
+        XCTAssertTrue(app.staticTexts["overview.balance"].waitForExistence(timeout: 15))
+        app.buttons["Настройки"].tap()
+        let settings = app.navigationBars["Настройки"]
+        let done = settings.buttons["Готово"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        XCTAssertTrue(done.isHittable)
+
+        // Exercise the privacy window while a sheet is presented. Demo lock is
+        // disabled; this tests scene/window lifecycle, not biometric enrollment.
+        XCUIDevice.shared.press(.home)
+        let background = NSPredicate { object, _ in
+            guard let application = object as? XCUIApplication else { return false }
+            return application.state == .runningBackground || application.state == .runningBackgroundSuspended
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: background, object: app)], timeout: 5), .completed)
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "Returning must preserve the presented settings sheet")
+        let hittable = NSPredicate { object, _ in
+            guard let element = object as? XCUIElement else { return false }
+            return element.exists && element.isHittable
+        }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: hittable, object: done)], timeout: 5), .completed,
+                       "The privacy window must stop intercepting the sheet after activation")
+        screenshot("12-settings-after-background")
+        done.tap()
+        let balance = app.staticTexts["overview.balance"]
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: hittable, object: balance)], timeout: 5), .completed,
+                       "Dismissing settings must reveal the interactive overview")
+        XCTAssertTrue(app.buttons["Расход"].isHittable)
+    }
+
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
@@ -194,12 +226,10 @@ final class LumoUITests: XCTestCase {
         currency.tap()
         let choice = ["BYN": "Белорусский рубль · BYN", "USD": "Доллар · USD"][code]!
         tapPicker("currency.display", choice: choice)
-        let done = app.navigationBars.buttons["Готово"].firstMatch
-        if !done.exists {
-            let back = app.navigationBars.buttons["Настройки"]
-            XCTAssertTrue(back.waitForExistence(timeout: 5))
-            back.tap()
-        }
+        let back = app.navigationBars["Валюта отображения"].buttons["Настройки"].firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        back.tap()
+        let done = app.navigationBars["Настройки"].buttons["Готово"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5))
         done.tap()
         XCTAssertTrue(app.staticTexts["overview.balance"].waitForExistence(timeout: 5))

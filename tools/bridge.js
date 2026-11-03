@@ -1,8 +1,8 @@
 // Native transport only. Financial calculations remain in the audited core above.
-let nativeStore = createStore();
+let nativeStore = createStore({ strictEnvelopeBalances: true });
 const mutators = new Set(['addTransaction', 'updateTransaction', 'deleteTransaction', 'setReserved',
   'reserveAll', 'updateSettings', 'saveAccount', 'deleteAccount', 'saveEnvelope', 'setEnvelopePercents',
-  'rebalanceEnvelopes', 'saveCategory', 'deleteCategory', 'saveAsset', 'deleteAsset']);
+  'rebalanceEnvelopes', 'saveCategory', 'deleteCategory', 'saveAsset', 'deleteAsset', 'saveExpense', 'releaseEnvelopeFunds']);
 
 function nativeSnapshot(month) {
   const state = nativeStore.snapshot();
@@ -35,7 +35,9 @@ globalThis.LumoBridge = {
       } else if (operation === 'prepare') {
         const existing = nativeStore.get().transactions.find(t => t.id === payload.id) || null;
         value = prepareTransaction(nativeStore.get(), payload.draft, existing);
-      } else if (operation === 'previewRebalance') value = nativeStore.previewRebalance();
+      } else if (operation === 'previewExpense') value = nativeStore.previewExpense(payload.draft, payload.id || null, { mode: payload.mode });
+      else if (operation === 'previewRelease') value = nativeStore.previewRelease(payload.amount);
+      else if (operation === 'previewRebalance') value = nativeStore.previewRebalance();
       else if (mutators.has(operation)) value = nativeStore[operation](...(payload.args || [])) ?? null;
       else throw new Error('Неизвестная команда');
       return JSON.stringify({ ok: true, value });

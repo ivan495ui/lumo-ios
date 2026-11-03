@@ -1,6 +1,7 @@
 import SwiftUI
 import LocalAuthentication
 import UIKit
+import Combine
 
 @MainActor
 final class AppLock: ObservableObject {

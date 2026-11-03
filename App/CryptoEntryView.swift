@@ -71,7 +71,7 @@ struct CryptoEntryView: View {
                     Picker("Актив", selection: $assetID) {
                         Text("Выбери актив").tag("")
                         ForEach(assets) { Text($0.symbol).tag($0.id) }
-                    }
+                    }.accessibilityIdentifier("crypto.asset")
                     TextField("Количество \(asset?.symbol ?? "актива")", text: $quantity)
                         .keyboardType(.decimalPad).accessibilityIdentifier("crypto.quantity")
                     if let asset, mode.isOutgoing {
@@ -89,12 +89,20 @@ struct CryptoEntryView: View {
                         Text("Выбери счёт").tag("")
                         ForEach(fiatAccounts) { Text($0.name).tag($0.id) }
                     }.accessibilityIdentifier("crypto.fiatAccount")
+                    if mode == .bought {
+                        LabeledContent("Свободные деньги", value: model.displayMoney(model.snapshot?.derived.unallocated ?? 0))
+                        NavigationLink("Освободить из конвертов") { ReleaseEnvelopeFundsView() }
+                            .accessibilityIdentifier("crypto.releaseFunds")
+                    }
                 }
             } header: {
                 Text(mode == .withdraw ? "Получено в \(model.currency)" : mode == .bought ? "Оплачено в \(model.currency)" : "Оценка операции в \(model.currency)")
             } footer: {
                 if mode.hasFiatFlow {
                     Text("Укажи фактически \(mode == .withdraw ? "полученную" : "оплаченную") сумму. Изменится только выбранный денежный счёт; конверты останутся прежними.")
+                    if mode == .bought {
+                        Text("Покупка записывается из свободных денег. Отложенные в конвертах суммы автоматически не используются.")
+                    }
                 } else {
                     Text(mode == .received
                          ? "Карта и наличные не изменятся. Если оценка неизвестна, оставь её пустой; курс актива можно указать позднее."
@@ -105,6 +113,7 @@ struct CryptoEntryView: View {
             Section {
                 DatePicker("Дата", selection: $date, displayedComponents: .date)
                 TextField("Комментарий", text: $comment, axis: .vertical).lineLimit(2...4)
+                    .accessibilityIdentifier("crypto.comment")
             }
             if let localError { Section { Text(localError).foregroundStyle(.red) } }
         }

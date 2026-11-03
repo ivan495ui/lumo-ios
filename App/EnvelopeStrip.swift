@@ -76,14 +76,15 @@ struct EnvelopeStrip: View {
             Spacer(minLength: 0)
 
             HStack(alignment: .firstTextBaseline, spacing: currencySpacing) {
+                if roundedValue(envelope).approximate {
+                    Text("≈").font(LumoType.caption).foregroundStyle(.secondary)
+                }
+                if roundedValue(envelope).symbolLeading { unit(envelope) }
                 Text(roundedValue(envelope).number)
                     .font(LumoType.cardAmount)
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(roundedValue(envelope).symbol)
-                    .font(LumoType.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if !roundedValue(envelope).symbolLeading { unit(envelope) }
             }
             .fixedSize(horizontal: true, vertical: false)
         }
@@ -142,7 +143,9 @@ struct EnvelopeStrip: View {
             // The number keeps title3, including cents; only the currency is caption.
             let numberWidth = (roundedValue(envelope).number as NSString)
                 .size(withAttributes: [.font: amountFont]).width
-            let amountWidth = numberWidth + currencySpacing + currencyWidth
+            let approximateWidth = roundedValue(envelope).approximate
+                ? ("≈" as NSString).size(withAttributes: [.font: currencyFont]).width + currencySpacing : 0
+            let amountWidth = numberWidth + currencySpacing + currencyWidth + approximateWidth
             let nameWidth = (displayName(envelope) as NSString)
                 .size(withAttributes: [.font: labelFont]).width
             // Keep a small reserve for rounding and SwiftUI/UIKit font metrics.
@@ -182,5 +185,8 @@ struct EnvelopeStrip: View {
     }
     private func roundedValue(_ envelope: LumoCore.Envelope) -> MoneyValue {
         model.displayValue(envelope.balance ?? 0, rounded: true)
+    }
+    private func unit(_ envelope: LumoCore.Envelope) -> some View {
+        Text(roundedValue(envelope).symbol).font(LumoType.caption).foregroundStyle(.secondary).lineLimit(1)
     }
 }

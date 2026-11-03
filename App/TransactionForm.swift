@@ -24,6 +24,8 @@ struct TransactionForm: View {
     @State private var localError: String?
     @State private var initialized = false
     @State private var lastAutoAmount = ""
+    @State private var fundingPreview: ExpenseCoveragePreview?
+    @State private var fundingError: String?
 
     private var fiatAccounts: [Account] { (model.snapshot?.state.accounts ?? []).filter { $0.kind != "crypto" && (!$0.archived || $0.id == existing?.accountId || $0.id == existing?.toAccountId) } }
     private var assets: [Asset] {
@@ -113,9 +115,10 @@ struct TransactionForm: View {
             if [.expense, .refund, .envTransfer].contains(kind) {
                 Section {
                     Picker(kind == .envTransfer ? "Из конверта" : "Конверт", selection: $envelopeID) {
-                        Text(kind == .envTransfer ? "Выбери конверт" : "Свободные деньги").tag("")
+                        if kind == .expense { Text("Из всех денег").tag("__smart__") }
+                        Text(kind == .envTransfer ? "Выбери конверт" : kind == .expense ? "Только свободные" : "Свободные деньги").tag("")
                         ForEach(envelopes) { Text($0.name).tag($0.id) }
-                    }
+                    }.accessibilityIdentifier("transaction.envelope")
                     if kind == .envTransfer {
                         Picker("В конверт", selection: $toEnvelopeID) {
                             Text("Выбери конверт").tag("")
@@ -124,6 +127,7 @@ struct TransactionForm: View {
                     }
                 }
             }
+            if kind == .expense { expenseFundingSection }
             if kind == .income {
                 Section {
                     if model.snapshot?.state.settings.taxEnabled == true || (existing?.taxAccrued ?? 0) > 0 {
@@ -147,13 +151,20 @@ struct TransactionForm: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Готово") { save() }.fontWeight(.semibold) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Готово") { save() }.fontWeight(.semibold)
+                        .disabled(kind == .expense && fundingPreview == nil)
+                }
             }
             .onAppear { initialize() }
             .onChange(of: quantity) { _, _ in updateCryptoCost() }
             .onChange(of: assetID) { _, _ in updateCryptoCost() }
             .onChange(of: assets.map(\.id)) { _, ids in
                 if existing == nil && !ids.contains(assetID) { selectDefaultAsset() }
+            }
+            .onChange(of: expensePreviewKey) { _, _ in refreshExpensePreview() }
+            .onReceive(model.$snapshot) { _ in
+                Task { @MainActor in refreshExpensePreview() }
             }
     }
 
@@ -162,13 +173,59 @@ struct TransactionForm: View {
         return model.prepared(draft, existingID: existing?.id)
     }
 
+    private var expenseMode: String { envelopeID == "__smart__" ? "smart" : envelopeID.isEmpty ? "free" : "envelope" }
+    private var expensePreviewKey: String {
+        [kind.rawValue, amount, accountID, envelopeID, categoryID, WalletModel.dateKey(date), comment].joined(separator: "|")
+    }
+    private var expenseFundingSection: some View {
+        Section {
+            if let preview = fundingPreview {
+                if preview.freeUsed > 0 {
+                    LabeledContent("Свободные деньги", value: money(preview.freeUsed, currency: model.currency))
+                }
+                ForEach(preview.rows.filter { $0.used > 0 }) { row in
+                    VStack(alignment: .leading, spacing: 4) {
+                        LabeledContent(row.name, value: money(row.used, currency: model.currency))
+                        Text("Останется \(money(row.after, currency: model.currency))")
+                            .font(LumoType.caption).foregroundStyle(.secondary)
+                    }
+                }
+            } else if let fundingError {
+                Text(fundingError).foregroundStyle(.red)
+                if expenseMode != "smart" {
+                    Button("Покрыть из всех денег") { envelopeID = "__smart__" }
+                        .accessibilityIdentifier("transaction.coverAll")
+                }
+            } else {
+                Text("Введи сумму — здесь появится точное покрытие расхода.")
+                    .font(LumoType.caption).foregroundStyle(.secondary)
+            }
+        } header: { Text("Из чего оплачен расход") }
+        footer: {
+            Text(expenseMode == "smart"
+                 ? "Сначала свободные деньги, затем конверты пропорционально положительным остаткам. Все суммы предпросмотра — в \(model.currency)."
+                 : "Расход спишется только из выбранного источника. Если денег не хватает, выбери «Из всех денег» и проверь новое покрытие.")
+        }
+    }
+    private func refreshExpensePreview() {
+        guard initialized, kind == .expense else { fundingPreview = nil; fundingError = nil; return }
+        guard !amount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { fundingPreview = nil; fundingError = nil; return }
+        do {
+            fundingPreview = try model.expensePreview(draft(), existingID: existing?.id, mode: expenseMode)
+            fundingError = nil
+        } catch {
+            fundingPreview = nil
+            fundingError = error.localizedDescription
+        }
+    }
+
     private func draft() throws -> [String: Any] {
         let cents = try model.cents(amount)
         var draft: [String: Any] = ["type": kind.rawValue, "amount": cents, "date": WalletModel.dateKey(date), "comment": comment,
             "accountId": (!kind.isCrypto || fiatFlow) && kind != .envTransfer && !accountID.isEmpty ? accountID as Any : NSNull(),
             "toAccountId": kind == .transfer && !toAccountID.isEmpty ? toAccountID as Any : NSNull(),
             "categoryId": [.income, .expense, .refund].contains(kind) && !categoryID.isEmpty ? categoryID as Any : NSNull(),
-            "envelopeId": [.expense, .refund, .envTransfer].contains(kind) && !envelopeID.isEmpty ? envelopeID as Any : NSNull(),
+            "envelopeId": [.expense, .refund, .envTransfer].contains(kind) && !envelopeID.isEmpty && envelopeID != "__smart__" ? envelopeID as Any : NSNull(),
             "toEnvelopeId": kind == .envTransfer && !toEnvelopeID.isEmpty ? toEnvelopeID as Any : NSNull()]
         if kind.isCrypto {
             guard assets.contains(where: { $0.id == assetID }) else { throw FinanceError.message("Выбери актив этого криптосчёта") }
@@ -192,9 +249,13 @@ struct TransactionForm: View {
         do {
             let draft = try draft()
             let success: Bool
-            if let existing { success = model.mutate("updateTransaction", [existing.id, draft]) { localError = $0 } }
+            if kind == .expense {
+                guard let fundingPreview else { throw FinanceError.message(fundingError ?? "Проверь покрытие расхода") }
+                success = model.mutate("saveExpense", [draft, existing?.id as Any? ?? NSNull(), ["mode": expenseMode], fundingPreview.fingerprint]) { localError = $0 }
+            } else if let existing { success = model.mutate("updateTransaction", [existing.id, draft]) { localError = $0 } }
             else { success = model.mutate("addTransaction", [draft]) { localError = $0 } }
             if success { dismiss() }
+            else if kind == .expense { refreshExpensePreview() }
         } catch { localError = error.localizedDescription }
     }
     private func updateCryptoCost() {
@@ -214,6 +275,10 @@ struct TransactionForm: View {
         categoryID = existing?.categoryId ?? ""
         envelopeID = existing?.envelopeId ?? ""
         if existing == nil { applyDefaults() }
+        else if kind == .expense, let existing,
+                model.snapshot?.state.transactions.contains(where: { $0.coverageFor == existing.id }) == true {
+            envelopeID = "__smart__"
+        }
         toEnvelopeID = existing?.toEnvelopeId ?? ""
         if let existing { assetID = existing.assetId ?? "" }
         else { selectDefaultAsset() }
@@ -228,10 +293,11 @@ struct TransactionForm: View {
             date = formatter.date(from: key) ?? Date()
         }
         initialized = true
+        refreshExpensePreview()
     }
     private func applyDefaults() {
         categoryID = categories.first { $0.id == (kind == .income ? "cat_income_other" : "cat_other") }?.id ?? ""
-        envelopeID = [.expense, .refund].contains(kind) ? (envelopes.first { $0.id == "env_personal" }?.id ?? envelopes.first?.id ?? "") : ""
+        envelopeID = kind == .expense ? "__smart__" : ""
     }
     private func selectDefaultAsset() {
         assetID = assets.first { $0.accountId == initialAccountID && $0.symbol.uppercased() == "USDT" }?.id

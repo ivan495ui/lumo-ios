@@ -28,7 +28,13 @@ struct BalanceValue: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var body: some View {
-        if dynamicTypeSize.isAccessibilitySize {
+        if value.symbolLeading {
+            Text(value.text(sign: sign)).font(LumoType.balance).foregroundStyle(LumoTheme.text)
+                .monospacedDigit().fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.numericText())
+                .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
+                .accessibilityIdentifier(identifier ?? "")
+        } else if dynamicTypeSize.isAccessibilitySize {
             stackedValue
         } else {
             ViewThatFits(in: .horizontal) {
@@ -134,11 +140,11 @@ struct TransactionRow: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(amountLabel)
+                Text(isCrypto ? model.cryptoQuantity(transaction) : amountLabel)
                     .font(LumoType.amount)
                     .foregroundStyle(transaction.isIncome ? LumoTheme.positive : LumoTheme.text).monospacedDigit()
-                if let qty = transaction.qty, qty != 0 {
-                    Text(model.cryptoQuantity(transaction))
+                if isCrypto {
+                    Text(transaction.amount == 0 ? "Без оценки" : transaction.accountId == nil ? model.estimatedMoney(transaction.amount) : amountLabel)
                         .font(LumoType.caption).foregroundStyle(.secondary)
                 }
             }
@@ -147,6 +153,7 @@ struct TransactionRow: View {
     private var amountLabel: String {
         model.displayMoney(transaction.amount, sign: transaction.moneySign)
     }
+    private var isCrypto: Bool { ["crypto_buy", "crypto_sell", "crypto_spend"].contains(transaction.type) && transaction.qty != nil }
 }
 
 extension LedgerTransaction {

@@ -71,7 +71,13 @@ final class WalletModel: ObservableObject {
         return true
     }
     var transactions: [LedgerTransaction] {
-        (snapshot?.state.transactions ?? []).sorted {
+        let all = snapshot?.state.transactions ?? []
+        return all.filter { entry in
+            // Old or orphaned metadata remains visible; hide only a valid paired
+            // funding event, whose details are shown on its parent expense.
+            !(entry.type == "env_rebalance" && entry.coverageFor != nil &&
+              all.contains { $0.id == entry.coverageFor && $0.type == "expense" })
+        }.sorted {
             $0.date == $1.date ? ($0.createdAt ?? "") > ($1.createdAt ?? "") : $0.date > $1.date
         }
     }
@@ -129,6 +135,17 @@ final class WalletModel: ObservableObject {
     func preview() throws -> RebalancePreview {
         guard let engine else { throw FinanceError.message("Ядро не загружено") }
         return try engine.preview()
+    }
+    func expensePreview(_ draft: [String: Any], existingID: String? = nil, mode: String) throws -> ExpenseCoveragePreview {
+        guard let engine else { throw FinanceError.message("Ядро не загружено") }
+        return try engine.value("previewExpense", ["draft": draft, "id": existingID as Any? ?? NSNull(), "mode": mode])
+    }
+    func releasePreview(_ amount: Int) throws -> ExpenseCoveragePreview {
+        guard let engine else { throw FinanceError.message("Ядро не загружено") }
+        return try engine.value("previewRelease", ["amount": amount])
+    }
+    func expenseCoverage(_ id: String) -> [LedgerTransaction] {
+        (snapshot?.state.transactions ?? []).filter { $0.type == "env_rebalance" && $0.coverageFor == id }
     }
     func exportText() throws -> String {
         guard let engine else { throw FinanceError.message("Ядро не загружено") }
