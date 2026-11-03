@@ -17,10 +17,7 @@ struct SettingsView: View {
             if let snapshot = model.snapshot {
                 Section("Отображение") {
                     Toggle("Скрыть криптовалюту", isOn: settingBool("hideCrypto", snapshot.state.settings.hideCrypto))
-                    Picker("Валюта учёта", selection: Binding(get: { snapshot.state.settings.currency }, set: { model.mutate("updateSettings", [["currency": $0]]) })) {
-                        Text("Белорусский рубль · BYN").tag("BYN"); Text("Доллар · USD").tag("USD"); Text("Российский рубль · RUB").tag("RUB")
-                    }
-                    Text("Смена обозначения валюты не пересчитывает введённые суммы.").font(.footnote).foregroundStyle(.secondary)
+                    NavigationLink("Валюта отображения") { CurrencySettingsView(exchange: model.exchange) }
                 }
                 Section("Налоговый резерв") {
                     Toggle("Откладывать на налог", isOn: settingBool("taxEnabled", snapshot.state.settings.taxEnabled))
@@ -35,6 +32,10 @@ struct SettingsView: View {
                     NavigationLink("Доли конвертов") { PercentagesView() }
                 }
             }
+            Section("Сохранность и защита") {
+                NavigationLink("Автоматическая защищённая копия") { BackupSettingsView(service: model.automaticBackup) }
+                NavigationLink("Face ID и код-пароль") { AppLockSettingsView(lock: model.appLock) }
+            }
             Section {
                 if let dataError { Text(dataError).foregroundStyle(.red).font(LumoType.body) }
                 Button("Экспортировать JSON", systemImage: "square.and.arrow.up") {
@@ -43,10 +44,10 @@ struct SettingsView: View {
                 }.disabled(model.recoveryRequired)
                 Button("Импортировать JSON", systemImage: "square.and.arrow.down") { importing = true }
             } header: { Text("Данные") }
-            footer: { Text("Данные хранятся на этом iPhone. Сохраняй JSON в Файлы. Для переноса из Telegram экспортируй копию на телефоне, где видны твои операции, и открой её здесь. Синхронизация между устройствами пока не включена.") }
+            footer: { Text("Журнал хранится на этом iPhone. Настрой автоматическую защищённую копию в iCloud Drive один раз. JSON нужен для переноса из Telegram или ручного экспорта; он содержит незашифрованные операции.") }
             Section {
                 LabeledContent("Приложение", value: "lumo")
-                LabeledContent("Версия", value: "2.0 · Native Preview")
+                LabeledContent("Версия", value: "2.1")
                 Text("Сделано для моих денег.").foregroundStyle(.secondary)
             }
         }.navigationTitle("Настройки").navigationBarTitleDisplayMode(.inline)
@@ -65,16 +66,10 @@ struct SettingsView: View {
                     replacing = true
                 } catch { dataError = error.localizedDescription }
             }
-            .alert("Заменить данные этой копией?", isPresented: $replacing) {
-                Button("Отмена", role: .cancel) { candidateText = nil; candidate = nil }
-                Button("Импортировать", role: .destructive) {
-                    if let candidateText, !model.importText(candidateText) {
-                        dataError = model.error; model.error = nil
-                    }
-                    candidateText = nil; candidate = nil
+            .sheet(isPresented: $replacing, onDismiss: { candidate = nil; candidateText = nil }) {
+                if let candidate, let candidateText {
+                    ImportReviewView(text: candidateText, candidate: candidate) { replacing = false }
                 }
-            } message: {
-                Text("В копии: \(candidate?.state.transactions.count ?? 0) операций, \(candidate?.state.accounts.count ?? 0) счетов. Баланс без крипты: \(money(candidate?.derived.fiatTotal ?? 0, currency: candidate?.state.settings.currency ?? "BYN")). Текущие данные приложения будут заменены; предыдущая версия останется резервной копией.")
             }
     }
     private func settingBool(_ key: String, _ value: Bool) -> Binding<Bool> {
@@ -88,9 +83,9 @@ struct TaxView: View {
         if let tax = model.snapshot?.derived.tax {
             List {
                 Section {
-                    LabeledContent("Доступно в резерве", value: money(tax.reserveAvailable, currency: model.currency))
-                    LabeledContent("Ещё не отложено", value: money(tax.pending, currency: model.currency))
-                    LabeledContent("Уплачено", value: money(tax.paid, currency: model.currency))
+                    LabeledContent("Доступно в резерве", value: model.displayMoney(tax.reserveAvailable))
+                    LabeledContent("Ещё не отложено", value: model.displayMoney(tax.pending))
+                    LabeledContent("Уплачено", value: model.displayMoney(tax.paid))
                 }
                 Section {
                     if tax.pending > 0 { Button("Отложить весь начисленный налог") { model.mutate("reserveAll") } }
@@ -100,7 +95,7 @@ struct TaxView: View {
                     ForEach(tax.items) { item in
                         Toggle(isOn: Binding(get: { item.reserved }, set: { model.mutate("setReserved", [item.txId, $0]) })) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(money(item.amount, currency: model.currency)).monospacedDigit()
+                                Text(model.displayMoney(item.amount)).monospacedDigit()
                                 Text(item.date).font(.caption).foregroundStyle(.secondary)
                             }
                         }

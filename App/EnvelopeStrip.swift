@@ -4,6 +4,7 @@ import LumoCore
 
 /// Overview-only presentation. Names, balances and allocation settings stay unchanged.
 struct EnvelopeStrip: View {
+    @EnvironmentObject var model: WalletModel
     let envelopes: [LumoCore.Envelope]
     let currency: String
 
@@ -75,11 +76,11 @@ struct EnvelopeStrip: View {
             Spacer(minLength: 0)
 
             HStack(alignment: .firstTextBaseline, spacing: currencySpacing) {
-                Text(moneyNumber(envelope.balance ?? 0))
+                Text(roundedValue(envelope).number)
                     .font(LumoType.cardAmount)
                     .monospacedDigit()
                     .lineLimit(1)
-                Text(currencySymbol(currency))
+                Text(roundedValue(envelope).symbol)
                     .font(LumoType.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -110,7 +111,7 @@ struct EnvelopeStrip: View {
                     .fixedSize()
             }
 
-            Text(money(envelope.balance ?? 0, currency: currency))
+            Text(model.displayMoney(envelope.balance ?? 0, rounded: true))
                 .font(LumoType.cardAmount)
                 .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
@@ -131,7 +132,7 @@ struct EnvelopeStrip: View {
         let amountSize = UIFont.preferredFont(forTextStyle: .title3, compatibleWith: traits).pointSize
         let amountFont = UIFont.monospacedDigitSystemFont(ofSize: amountSize, weight: .medium)
         let currencyFont = UIFont.preferredFont(forTextStyle: .caption1, compatibleWith: traits)
-        let currencyWidth = (currencySymbol(currency) as NSString)
+        let currencyWidth = (currencySymbol(model.effectiveDisplayCurrency) as NSString)
             .size(withAttributes: [.font: currencyFont]).width
         let labelSize = UIFont.preferredFont(forTextStyle: .footnote, compatibleWith: traits).pointSize
         let labelFont = UIFont.systemFont(ofSize: labelSize, weight: .medium)
@@ -139,7 +140,7 @@ struct EnvelopeStrip: View {
         return envelopes.contains { envelope in
             // Measure the same two baseline-aligned runs shown in the tile.
             // The number keeps title3, including cents; only the currency is caption.
-            let numberWidth = (moneyNumber(envelope.balance ?? 0) as NSString)
+            let numberWidth = (roundedValue(envelope).number as NSString)
                 .size(withAttributes: [.font: amountFont]).width
             let amountWidth = numberWidth + currencySpacing + currencyWidth
             let nameWidth = (displayName(envelope) as NSString)
@@ -177,6 +178,9 @@ struct EnvelopeStrip: View {
     }
 
     private func accessibilityLabel(_ envelope: LumoCore.Envelope) -> String {
-        "\(envelope.name), \(money(envelope.balance ?? 0, currency: currency)), \(share(envelope)) от дохода"
+        "\(envelope.name), \(model.displayMoney(envelope.balance ?? 0, rounded: true)), \(share(envelope)) от дохода. Точно в учёте: \(money(envelope.balance ?? 0, currency: currency))"
+    }
+    private func roundedValue(_ envelope: LumoCore.Envelope) -> MoneyValue {
+        model.displayValue(envelope.balance ?? 0, rounded: true)
     }
 }

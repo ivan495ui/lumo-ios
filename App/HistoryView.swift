@@ -13,7 +13,7 @@ struct HistoryView: View {
             (account.isEmpty || transaction.accountId == account || transaction.toAccountId == account ||
              model.snapshot?.derived.cryptoAssets.contains { $0.id == transaction.assetId && $0.accountId == account } == true) &&
             (type.isEmpty || transaction.type == type) &&
-            (search.isEmpty || [transaction.comment, model.categoryName(transaction.categoryId), transaction.label, model.accountName(transaction.accountId)]
+            (search.isEmpty || [transaction.comment, model.categoryName(transaction.categoryId), transaction.label, model.accountName(transaction.accountId), model.accountName(transaction.toAccountId)]
                 .compactMap { $0 }.joined(separator: " ").localizedCaseInsensitiveContains(search))
         }
     }
@@ -33,7 +33,10 @@ struct HistoryView: View {
                         Button("Сбросить") { account = ""; type = "" }.font(LumoType.caption).frame(minHeight: 44)
                     }
                 }
-                if rows.isEmpty { EmptyLedger() }
+                if rows.isEmpty {
+                    if model.transactions.isEmpty { EmptyLedger() }
+                    else { ContentUnavailableView("Операций не найдено", systemImage: "line.3.horizontal.decrease.circle", description: Text("Попробуй другой месяц, поиск или фильтр.")) }
+                }
                 ForEach(grouped.keys.sorted(by: >), id: \.self) { day in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(dayLabel(day)).font(LumoType.section)
@@ -96,7 +99,10 @@ struct TransactionDetail: View {
                 Section {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(transaction.label, systemImage: transaction.symbol).foregroundStyle(.secondary)
-                        BalanceValue(cents: transaction.amount, currency: model.currency)
+                        BalanceValue(cents: transaction.amount, currency: model.currency, presentation: model.displayValue(transaction.amount), sign: transaction.moneySign)
+                        if model.effectiveDisplayCurrency != model.currency {
+                            Text("В учёте: \(money(transaction.amount, currency: model.currency))").font(.footnote).foregroundStyle(.secondary)
+                        }
                     }.padding(.vertical, 12)
                     LabeledContent("Дата", value: transaction.date)
                     if let name = model.accountName(transaction.accountId) { LabeledContent("Счёт", value: name) }
@@ -104,19 +110,19 @@ struct TransactionDetail: View {
                     if let name = model.categoryName(transaction.categoryId) { LabeledContent("Категория", value: name) }
                     if let name = model.envelopeName(transaction.envelopeId) { LabeledContent("Конверт", value: name) }
                     if let name = model.envelopeName(transaction.toEnvelopeId) { LabeledContent("В конверт", value: name) }
-                    if let qty = transaction.qty, qty != 0 { LabeledContent("Количество", value: qty.formatted(.number.precision(.fractionLength(0...8)))) }
+                    if let qty = transaction.qty, qty != 0 { LabeledContent("Количество", value: model.cryptoQuantity(transaction)) }
                     if let comment = transaction.comment, !comment.isEmpty { Text(comment) }
                 }
                 if let alloc = transaction.alloc, !alloc.isEmpty {
                     Section("Распределение") {
                         ForEach(alloc.keys.sorted(), id: \.self) { id in
-                            LabeledContent(model.envelopeName(id) ?? id, value: money(alloc[id] ?? 0, currency: model.currency))
+                            LabeledContent(model.envelopeName(id) ?? id, value: model.displayMoney(alloc[id] ?? 0))
                         }
                     }
                 }
                 if let tax = transaction.taxAccrued, tax > 0 {
                     Section("Налог") {
-                        LabeledContent("Начислено", value: money(tax, currency: model.currency))
+                        LabeledContent("Начислено", value: model.displayMoney(tax))
                         Toggle("Отложено в резерв", isOn: Binding(get: { transaction.reserved != false }, set: { model.mutate("setReserved", [transaction.id, $0]) }))
                     }
                 }

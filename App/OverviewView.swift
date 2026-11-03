@@ -29,7 +29,7 @@ struct OverviewView: View {
         let amount = showTotal ? snapshot.derived.total : snapshot.derived.fiatTotal
         return VStack(alignment: .leading, spacing: 12) {
             balanceMode(snapshot, showTotal: showTotal)
-            BalanceValue(cents: amount, currency: model.currency, identifier: "overview.balance", onAccent: true)
+            BalanceValue(cents: amount, currency: model.currency, identifier: "overview.balance", onAccent: true, presentation: model.displayValue(amount))
             Rectangle().fill(Color.white.opacity(0.12)).frame(height: 0.5)
             dailyActions
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
@@ -106,10 +106,10 @@ struct OverviewView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Конверты").font(LumoType.section)
             EnvelopeStrip(envelopes: snapshot.derived.envelopes, currency: model.currency)
-            if snapshot.derived.unallocated != 0 {
+            if snapshot.derived.unallocated != 0 || snapshot.derived.envelopes.contains(where: { ($0.balance ?? 0) < 0 }) {
                 NavigationLink { RebalanceView() } label: {
                     HStack {
-                        Text(snapshot.derived.unallocated > 0 ? "Распределить свободные \(money(snapshot.derived.unallocated, currency: model.currency))" : "Проверить распределение")
+                        Text(snapshot.derived.envelopes.contains(where: { ($0.balance ?? 0) < 0 }) ? "Выровнять конверты после перерасхода" : snapshot.derived.unallocated > 0 ? "Распределить свободные \(model.displayMoney(snapshot.derived.unallocated))" : "Проверить распределение")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2)
                     }.font(LumoType.caption).frame(minHeight: 44)
@@ -130,13 +130,13 @@ struct OverviewView: View {
                             if dynamicTypeSize > .large {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(account.name).font(LumoType.label).fixedSize(horizontal: false, vertical: true)
-                                    Text(money(account.balance ?? 0, currency: model.currency)).font(LumoType.amount).monospacedDigit().fixedSize(horizontal: false, vertical: true)
+                                    Text(model.displayMoney(account.balance ?? 0)).font(LumoType.amount).monospacedDigit().fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 0)
                             } else {
                                 Text(account.name).font(LumoType.label).lineLimit(1)
                                 Spacer(minLength: 8)
-                                Text(money(account.balance ?? 0, currency: model.currency)).font(LumoType.amount).monospacedDigit()
+                                Text(model.displayMoney(account.balance ?? 0)).font(LumoType.amount).monospacedDigit()
                             }
                             Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
                         }.padding(.horizontal, 14).padding(.vertical, 16)

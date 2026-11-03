@@ -47,6 +47,7 @@ public struct Asset: Decodable, Identifiable {
     public let qty: Double?
     public let value: Int?
     public let accountId: String?
+    public let updatedAt: String?
 }
 
 public struct Envelope: Decodable, Identifiable {

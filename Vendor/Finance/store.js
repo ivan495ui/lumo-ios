@@ -97,6 +97,14 @@ export function createStore({ storage, key = STORAGE_KEY } = {}) {
   function update(mutator) {
     const next = clone(state);
     mutator(next);
+    // Imports may contain an old negative holding. Keep that history readable,
+    // but never create a new deficit or deepen an existing one during a mutation.
+    const previousQty = new Map(computeState(state).cryptoAssets.map((asset) => [asset.id, asset.qty]));
+    for (const asset of computeState(next).cryptoAssets) {
+      if (asset.qty < Math.min(0, previousQty.get(asset.id) ?? 0)) {
+        throw new Error(`Изменение оставит отрицательный остаток ${asset.symbol}. Сначала исправьте связанные операции.`);
+      }
+    }
     return commit(next);
   }
 
@@ -183,7 +191,8 @@ export function createStore({ storage, key = STORAGE_KEY } = {}) {
     },
 
     deleteAccount(id) {
-      const used = state.transactions.some((t) => t.accountId === id || t.toAccountId === id);
+      const assetIds = new Set((state.accounts.find((a) => a.id === id)?.assets || []).map((a) => a.id));
+      const used = state.transactions.some((t) => t.accountId === id || t.toAccountId === id || assetIds.has(t.assetId));
       if (used) throw new Error('По счёту есть операции. Удалить нельзя — можно скрыть счёт.');
       update((s) => { s.accounts = s.accounts.filter((a) => a.id !== id); });
     },

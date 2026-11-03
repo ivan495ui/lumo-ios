@@ -12,6 +12,8 @@ struct RootView: View {
                         NavigationLink("Открыть данные") { SettingsView() }.buttonStyle(.borderedProminent)
                     }.padding().navigationTitle("lumo")
                 }
+            } else if model.needsCurrencyConfirmation {
+                NavigationStack { ConfirmLedgerCurrencyView() }
             } else if model.snapshot != nil {
                 TabView {
                     Tab("Обзор", systemImage: "house.fill") { WalletPage(title: "lumo") { OverviewView() } }

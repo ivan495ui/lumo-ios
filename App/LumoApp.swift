@@ -4,12 +4,20 @@ import LumoCore
 @main
 struct LumoApp: App {
     @StateObject private var model = WalletModel()
+    @Environment(\.scenePhase) private var scenePhase
     var body: some Scene {
         WindowGroup {
-            appContent
+            AppLockCover(lock: model.appLock) { appContent }
                 .environmentObject(model)
                 .preferredColorScheme(.dark)
                 .tint(LumoTheme.accent)
+                .onChange(of: scenePhase) { _, phase in
+                    model.appLock.sceneChanged(phase)
+                    if phase == .active {
+                        model.automaticBackup.retry()
+                        Task { await model.exchange.refresh(base: model.currency) }
+                    }
+                }
         }
     }
     @ViewBuilder private var appContent: some View {

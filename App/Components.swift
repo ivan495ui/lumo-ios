@@ -22,6 +22,9 @@ struct BalanceValue: View {
     let currency: String
     var identifier: String? = nil
     var onAccent = false
+    var presentation: MoneyValue? = nil
+    var sign = ""
+    private var value: MoneyValue { presentation ?? MoneyValue(cents: cents, currency: currency) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var body: some View {
@@ -30,8 +33,9 @@ struct BalanceValue: View {
         } else {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
+                    if value.symbolLeading { unit.fixedSize() }
                     number.fixedSize()
-                    unit.fixedSize()
+                    if !value.symbolLeading { unit.fixedSize() }
                 }
                 stackedValue
             }
@@ -44,14 +48,14 @@ struct BalanceValue: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
     private var number: some View {
-        Text(moneyNumber(cents)).font(LumoType.balance).foregroundStyle(LumoTheme.text)
+        Text((value.approximate ? "≈ " : "") + sign + value.number).font(LumoType.balance).foregroundStyle(LumoTheme.text)
             .monospacedDigit().contentTransition(.numericText())
             .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
-            .accessibilityLabel(money(cents, currency: currency))
+            .accessibilityLabel(value.text(sign: sign))
             .accessibilityIdentifier(identifier ?? "")
     }
     private var unit: some View {
-        Text(currencySymbol(currency)).font(LumoType.amount)
+        Text(value.symbol).font(LumoType.amount)
             .foregroundStyle(onAccent ? LumoTheme.heroSecondary : Color.secondary).accessibilityHidden(true)
     }
 }
@@ -78,7 +82,7 @@ func currencySymbol(_ currency: String) -> String {
 }
 
 func money(_ cents: Int, currency: String = "BYN") -> String {
-    "\(moneyNumber(cents)) \(currencySymbol(currency))"
+    MoneyValue(cents: cents, currency: currency).text()
 }
 
 func amountText(_ cents: Int) -> String {
@@ -97,6 +101,7 @@ struct Badge: View {
 }
 
 struct AccountRow: View {
+    @EnvironmentObject var model: WalletModel
     let account: Account
     let currency: String
     var body: some View {
@@ -108,7 +113,7 @@ struct AccountRow: View {
                     .font(LumoType.caption).foregroundStyle(.secondary)
             }
             Spacer(minLength: 8)
-            Text(money(account.balance ?? 0, currency: currency)).font(LumoType.amount).monospacedDigit()
+            Text(model.displayMoney(account.balance ?? 0)).font(LumoType.amount).monospacedDigit()
         }.padding(.vertical, 5)
     }
 }
@@ -133,19 +138,25 @@ struct TransactionRow: View {
                     .font(LumoType.amount)
                     .foregroundStyle(transaction.isIncome ? LumoTheme.positive : LumoTheme.text).monospacedDigit()
                 if let qty = transaction.qty, qty != 0 {
-                    Text(qty.formatted(.number.precision(.fractionLength(0...8))))
+                    Text(model.cryptoQuantity(transaction))
                         .font(LumoType.caption).foregroundStyle(.secondary)
                 }
             }
         }.padding(.vertical, 4)
     }
     private var amountLabel: String {
-        let prefix: String
-        if ["income", "refund"].contains(transaction.type) { prefix = "+" }
-        else if ["expense", "tax_payment"].contains(transaction.type) { prefix = "−" }
-        else if transaction.type == "adjustment", transaction.amount > 0 { prefix = "+" }
-        else { prefix = "" }
-        return prefix + money(transaction.amount, currency: model.currency)
+        model.displayMoney(transaction.amount, sign: transaction.moneySign)
+    }
+}
+
+extension LedgerTransaction {
+    var moneySign: String {
+        if ["income", "refund"].contains(type) { return "+" }
+        if ["expense", "tax_payment"].contains(type) { return "−" }
+        if type == "crypto_buy", accountId != nil { return "−" }
+        if type == "crypto_sell", accountId != nil { return "+" }
+        if type == "adjustment", amount > 0 { return "+" }
+        return ""
     }
 }
 

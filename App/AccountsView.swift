@@ -12,7 +12,7 @@ struct AccountsView: View {
 
     private var usesCompactGallery: Bool {
         dynamicTypeSize <= .large && model.visibleAccounts.allSatisfy {
-            money($0.balance ?? 0, currency: model.currency).count <= 11
+            model.displayMoney($0.balance ?? 0).count <= 11
         }
     }
 
@@ -96,7 +96,7 @@ struct AccountsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(account.name).font(LumoType.label)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(money(account.balance ?? 0, currency: model.currency))
+                Text(model.displayMoney(account.balance ?? 0))
                     .font(featured ? LumoType.balance : LumoType.cardAmount)
                     .monospacedDigit()
                     .fixedSize(horizontal: false, vertical: true)
@@ -120,50 +120,31 @@ struct AccountsView: View {
 
 struct AccountDetail: View {
     @EnvironmentObject var model: WalletModel
+    @Environment(\.dismiss) private var dismiss
     let accountID: String
     @State private var editing = false
-    @State private var addingAsset = false
     @State private var kind: TransactionKind?
     var body: some View {
+        Group {
         if let account = model.snapshot?.derived.accounts.first(where: { $0.id == accountID }) {
+            if account.kind == "crypto" {
+                CryptoAccountView(accountID: accountID)
+            } else {
             List {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label(account.kind == "crypto" ? "Стоимость активов" : "Остаток", systemImage: account.symbol).foregroundStyle(.secondary)
-                        BalanceValue(cents: account.balance ?? 0, currency: model.currency)
+                        Label("Остаток", systemImage: account.symbol).foregroundStyle(.secondary)
+                        Text(model.displayMoney(account.balance ?? 0))
+                            .font(LumoType.balance).monospacedDigit()
+                            .fixedSize(horizontal: false, vertical: true)
                     }.padding(.vertical, 12)
                 }
                 Section {
-                    if account.kind == "crypto" {
-                        Button("Получить крипту", systemImage: "arrow.down.left") { kind = .cryptoBuy }
-                        Button("Потратить крипту", systemImage: "arrow.up.right") { kind = .cryptoSpend }
-                        Button("Вывести в деньги", systemImage: "arrow.left.arrow.right") { kind = .cryptoSell }
-                    } else {
-                        Button("Добавить доход", systemImage: "arrow.down.left") { kind = .income }
-                        Button("Добавить расход", systemImage: "arrow.up.right") { kind = .expense }
-                    }
-                }
-                if account.kind == "crypto" {
-                    Section {
-                        ForEach(model.snapshot?.derived.cryptoAssets.filter { $0.accountId == accountID } ?? []) { asset in
-                            NavigationLink { AssetForm(accountID: accountID, asset: asset) } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text(asset.symbol).font(LumoType.section)
-                                        Text("\((asset.qty ?? 0).formatted(.number.precision(.fractionLength(0...8)))) · \(money(asset.price, currency: model.currency)) за 1")
-                                            .font(LumoType.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(money(asset.value ?? 0, currency: model.currency)).monospacedDigit()
-                                }.padding(.vertical, 5)
-                            }
-                        }
-                        Button("Добавить актив", systemImage: "plus") { addingAsset = true }
-                    } header: { Text("Активы") } footer: { Text("Курс обновляется вручную. Крипта не попадает в фиатные конверты.") }
+                    Button("Добавить доход", systemImage: "arrow.down.left") { kind = .income }
+                    Button("Добавить расход", systemImage: "arrow.up.right") { kind = .expense }
                 }
                 Section("Операции по счёту") {
-                    let assets = Set((account.assets ?? []).map(\.id))
-                    let rows = model.transactions.filter { $0.accountId == accountID || $0.toAccountId == accountID || assets.contains($0.assetId ?? "") }
+                    let rows = model.transactions.filter { $0.accountId == accountID || $0.toAccountId == accountID }
                     if rows.isEmpty { EmptyLedger() }
                     ForEach(rows) { transaction in
                         NavigationLink { TransactionDetail(transactionID: transaction.id) } label: { TransactionRow(transaction: transaction) }
@@ -172,8 +153,12 @@ struct AccountDetail: View {
             }.navigationTitle(account.name)
                 .toolbar { Button("Изменить") { editing = true } }
                 .sheet(isPresented: $editing) { NavigationStack { AccountForm(account: account) } }
-                .sheet(isPresented: $addingAsset) { NavigationStack { AssetForm(accountID: accountID) } }
                 .sheet(item: $kind) { kind in NavigationStack { TransactionForm(initialKind: kind, initialAccountID: accountID) } }
+            }
+        }
+        }
+        .onChange(of: model.snapshot?.state.accounts.contains(where: { $0.id == accountID }) ?? true) { _, exists in
+            if !exists { dismiss() }
         }
     }
 }

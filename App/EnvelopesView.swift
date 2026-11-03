@@ -12,12 +12,19 @@ struct EnvelopesView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Распределено по конвертам")
                             .font(LumoType.body).foregroundStyle(.secondary)
-                        Text(money(snapshot.derived.envelopeTotal, currency: model.currency))
+                        Text(model.displayMoney(snapshot.derived.envelopeTotal, rounded: true))
                             .font(LumoType.balance).monospacedDigit()
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("envelopes.balance")
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if snapshot.derived.envelopes.contains(where: { ($0.balance ?? 0) < 0 }) {
+                        NavigationLink { RebalanceView() } label: {
+                            Label("Есть перерасход. Проверить распределение", systemImage: "exclamationmark.circle")
+                                .font(LumoType.body).frame(maxWidth: .infinity, alignment: .leading)
+                        }.accessibilityIdentifier("envelopes.repair")
+                    }
 
                     VStack(spacing: 10) {
                         ForEach(snapshot.derived.envelopes) { envelope in
@@ -70,7 +77,7 @@ struct EnvelopesView: View {
 
             if envelope.goal > 0 {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Цель · \(money(envelope.goal, currency: model.currency))")
+                    Text("Цель · \(model.displayMoney(envelope.goal, rounded: true))")
                         .font(LumoType.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     ProgressView(value: min(1, max(0, Double(envelope.balance ?? 0) / Double(envelope.goal))))
@@ -87,7 +94,7 @@ struct EnvelopesView: View {
     }
 
     private func amount(_ envelope: Envelope) -> some View {
-        Text(money(envelope.balance ?? 0, currency: model.currency))
+        Text(model.displayMoney(envelope.balance ?? 0, rounded: true))
             .font(LumoType.cardAmount).monospacedDigit()
             .foregroundStyle(LumoTheme.text)
     }
@@ -124,7 +131,7 @@ struct EnvelopesView: View {
             .buttonStyle(.plain)
             .background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            Text("По конвертам распределяются карта и наличные. Криптовалюта и налоговый резерв учитываются отдельно.")
+            Text("По конвертам распределяются карта и наличные. Криптовалюта и налоговый резерв учитываются отдельно. Суммы округлены до целых; копейки сохранены в учёте.")
                 .font(LumoType.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -159,7 +166,7 @@ struct RebalanceView: View {
                 Section {
                     LabeledContent("К распределению", value: money(preview.available, currency: model.currency))
                     LabeledContent("Сейчас свободно", value: money(preview.free, currency: model.currency))
-                } footer: { Text("Без криптовалюты и налогового резерва.") }
+                } footer: { Text("Без криптовалюты и налогового резерва. Суммы здесь показаны точно в \(model.currency), включая копейки.") }
                 Section("Было → станет") {
                     ForEach(preview.rows) { row in
                         LabeledContent(row.name) { Text("\(money(row.before, currency: model.currency)) → \(money(row.after, currency: model.currency))").font(LumoType.body).monospacedDigit() }

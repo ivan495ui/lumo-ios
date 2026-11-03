@@ -22,14 +22,14 @@ struct AnalyticsView: View {
                     HStack {
                         Text("Разница").foregroundStyle(.secondary)
                         Spacer()
-                        Text(money(snapshot.summary.net, currency: model.currency)).monospacedDigit()
+                        Text(model.displayMoney(snapshot.summary.net)).monospacedDigit()
                     }.font(LumoType.body)
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Динамика за полгода").font(LumoType.section)
                         Chart(snapshot.months) { month in
-                            BarMark(x: .value("Месяц", month.month), y: .value("Сумма", Double(month.income) / 100))
+                            BarMark(x: .value("Месяц", month.month), y: .value("Сумма", NSDecimalNumber(decimal: model.displayAmount(month.income)).doubleValue))
                                 .foregroundStyle(by: .value("Тип", "Доходы")).position(by: .value("Тип", "Доходы"))
-                            BarMark(x: .value("Месяц", month.month), y: .value("Сумма", Double(month.expenses) / 100))
+                            BarMark(x: .value("Месяц", month.month), y: .value("Сумма", NSDecimalNumber(decimal: model.displayAmount(month.expenses)).doubleValue))
                                 .foregroundStyle(by: .value("Тип", "Расходы")).position(by: .value("Тип", "Расходы"))
                         }.chartForegroundStyleScale(["Доходы": LumoTheme.positive, "Расходы": LumoTheme.accent])
                             .chartXAxis {
@@ -40,6 +40,7 @@ struct AnalyticsView: View {
                                 }
                             }
                             .frame(height: 180)
+                            .chartYAxisLabel(model.effectiveDisplayCurrency)
                             .accessibilityLabel("Доходы и расходы за шесть месяцев")
                     }.padding(16).background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     VStack(alignment: .leading, spacing: 12) {
@@ -54,7 +55,7 @@ struct AnalyticsView: View {
                                     HStack {
                                         Text(model.categoryName(row.id) ?? "Без категории").font(LumoType.body)
                                         Spacer()
-                                        Text(money(row.amount, currency: model.currency)).font(LumoType.amount).monospacedDigit()
+                                        Text(model.displayMoney(row.amount)).font(LumoType.amount).monospacedDigit().fixedSize(horizontal: false, vertical: true)
                                     }.padding(16)
                                     if row.id != snapshot.summary.byCategory.last?.id { Divider().padding(.leading, 16) }
                                 }
@@ -70,7 +71,7 @@ struct AnalyticsView: View {
     private func metric(_ title: String, cents: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title).font(LumoType.caption).foregroundStyle(.secondary)
-            Text(money(cents, currency: model.currency)).font(LumoType.cardAmount).foregroundStyle(color).monospacedDigit().fixedSize(horizontal: true, vertical: false)
+            Text(model.displayMoney(cents)).font(LumoType.cardAmount).foregroundStyle(color).monospacedDigit().fixedSize(horizontal: false, vertical: true)
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
             .background(LumoTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }

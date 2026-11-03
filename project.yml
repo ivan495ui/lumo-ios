@@ -11,8 +11,8 @@ settings:
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: ""
     CODE_SIGNING_ALLOWED: NO
-    CURRENT_PROJECT_VERSION: 1
-    MARKETING_VERSION: "2.0"
+    CURRENT_PROJECT_VERSION: 2
+    MARKETING_VERSION: "2.1"
     TARGETED_DEVICE_FAMILY: "1"
 targets:
   lumo:
@@ -28,6 +28,7 @@ targets:
         PRODUCT_NAME: lumo
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: lumo
+        INFOPLIST_KEY_NSFaceIDUsageDescription: Защита финансовых данных lumo при открытии приложения.
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.finance
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

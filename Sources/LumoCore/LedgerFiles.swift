@@ -7,11 +7,21 @@ public final class LedgerFiles {
     private let write: (Data, URL) throws -> Void
 
     public init(directory: URL, writer: @escaping (Data, URL) throws -> Void = { data, url in
+        #if os(iOS)
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
+        #else
         try data.write(to: url, options: .atomic)
+        #endif
     }) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         primary = directory.appendingPathComponent("ledger.json")
         backup = directory.appendingPathComponent("ledger.backup.json")
+        #if os(iOS)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: directory.path)
+        for file in [primary, backup] where FileManager.default.fileExists(atPath: file.path) {
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: file.path)
+        }
+        #endif
         write = writer
     }
 

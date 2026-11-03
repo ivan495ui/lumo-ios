@@ -735,7 +735,7 @@ function previewAllocation(state, amountCents, categoryId) {
   return { tax, base, alloc: distribute(base, state.envelopes) };
 }
 
-// store.js sha256:4fd4f22142dd16217f36b6b137c6ba0bf74a112e5ca864e00bcca343755bca79
+// store.js sha256:8fba1419992ec7795fc0947a523bcccda9532af9efb41e15bddd7d482bbb27a7
 /**
  * store.js — состояние, сохранение в localStorage, операции над журналом.
  * Storage можно подменить (используется в тестах).
@@ -834,6 +834,14 @@ function createStore({ storage, key = STORAGE_KEY } = {}) {
   function update(mutator) {
     const next = clone(state);
     mutator(next);
+    // Imports may contain an old negative holding. Keep that history readable,
+    // but never create a new deficit or deepen an existing one during a mutation.
+    const previousQty = new Map(computeState(state).cryptoAssets.map((asset) => [asset.id, asset.qty]));
+    for (const asset of computeState(next).cryptoAssets) {
+      if (asset.qty < Math.min(0, previousQty.get(asset.id) ?? 0)) {
+        throw new Error(`Изменение оставит отрицательный остаток ${asset.symbol}. Сначала исправьте связанные операции.`);
+      }
+    }
     return commit(next);
   }
 
@@ -920,7 +928,8 @@ function createStore({ storage, key = STORAGE_KEY } = {}) {
     },
 
     deleteAccount(id) {
-      const used = state.transactions.some((t) => t.accountId === id || t.toAccountId === id);
+      const assetIds = new Set((state.accounts.find((a) => a.id === id)?.assets || []).map((a) => a.id));
+      const used = state.transactions.some((t) => t.accountId === id || t.toAccountId === id || assetIds.has(t.assetId));
       if (used) throw new Error('По счёту есть операции. Удалить нельзя — можно скрыть счёт.');
       update((s) => { s.accounts = s.accounts.filter((a) => a.id !== id); });
     },

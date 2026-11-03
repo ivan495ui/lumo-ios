@@ -11,6 +11,7 @@ struct AccountForm: View {
     @State private var archived = false
     @State private var localError: String?
     @State private var deleting = false
+    @State private var initialized = false
     var body: some View {
         Form {
             Section {
@@ -28,7 +29,12 @@ struct AccountForm: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Готово") { save() } }
             }
-            .onAppear { name = account?.name ?? ""; kind = account?.kind ?? "card"; opening = amountText(account?.opening ?? 0); archived = account?.archived ?? false }
+            .onAppear {
+                guard !initialized else { return }
+                name = account?.name ?? ""; kind = account?.kind ?? "card"
+                opening = amountText(account?.opening ?? 0); archived = account?.archived ?? false
+                initialized = true
+            }
             .confirmationDialog("Удалить счёт?", isPresented: $deleting, titleVisibility: .visible) {
                 Button("Удалить", role: .destructive) { if let account, model.mutate("deleteAccount", [account.id], failure: { localError = $0 }) { dismiss() } }
             }
@@ -51,18 +57,46 @@ struct AssetForm: View {
     var asset: Asset?
     @State private var symbol = ""
     @State private var name = ""
-    @State private var quantity = "0"
-    @State private var price = "0"
+    @State private var quantity = ""
+    @State private var price = ""
     @State private var localError: String?
     @State private var deleting = false
+    @State private var initialized = false
+
+    private var currentAsset: Asset? {
+        guard let asset else { return nil }
+        return model.snapshot?.derived.cryptoAssets.first { $0.id == asset.id && $0.accountId == accountID }
+    }
     var body: some View {
         Form {
+            if asset == nil {
+                Section {
+                    Button("USDT · Tether") { symbol = "USDT"; name = "Tether" }
+                        .accessibilityIdentifier("asset.preset.usdt")
+                } footer: { Text("Быстрый выбор заполняет только название. Количество и курс укажи самостоятельно.") }
+            }
             Section {
                 TextField("Тикер, например USDT", text: $symbol).textInputAutocapitalization(.characters).autocorrectionDisabled()
+                    .accessibilityIdentifier("asset.symbol")
                 TextField("Название", text: $name)
-                TextField("Количество сейчас", text: $quantity).keyboardType(.decimalPad)
+                if asset == nil {
+                    TextField("Количество до первой операции", text: $quantity).keyboardType(.decimalPad)
+                        .accessibilityIdentifier("asset.initialQuantity")
+                } else if let currentAsset {
+                    LabeledContent("Количество", value: "\(cryptoQuantityText(currentAsset.qty ?? 0)) \(currentAsset.symbol)")
+                    NavigationLink("Исправить количество") { AssetQuantityCorrectionView(accountID: accountID, assetID: currentAsset.id) }
+                        .accessibilityIdentifier("asset.correctQuantity")
+                }
+            } footer: {
+                Text(asset == nil
+                     ? "Если начинаешь с нуля, введи 0. Новые поступления затем записывай кнопкой «Получил»."
+                     : "Исправление количества сохранится отдельной записью в истории. Обновление курса количество не меняет.")
+            }
+            Section {
                 TextField("Курс за 1, \(model.currency)", text: $price).keyboardType(.decimalPad)
-            } footer: { Text("Курс вводится вручную. Изменение количества здесь — корректировка остатка, а не доход или расход.") }
+                    .accessibilityIdentifier("asset.price")
+            } header: { Text("Ручной курс") }
+            footer: { Text("Введи стоимость одной единицы в \(model.currency). Если курс неизвестен, оставь поле пустым: количество сохранится без денежной оценки.") }
             if asset != nil { Section { Button("Удалить актив", role: .destructive) { deleting = true } } }
             if let localError { Text(localError).foregroundStyle(.red) }
         }.navigationTitle(asset == nil ? "Новый актив" : "Актив").navigationBarTitleDisplayMode(.inline)
@@ -70,7 +104,13 @@ struct AssetForm: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Отмена") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Готово") { save() } }
             }
-            .onAppear { symbol = asset?.symbol ?? ""; name = asset?.name ?? ""; quantity = String(asset?.qty ?? asset?.initialQty ?? 0); price = amountText(asset?.price ?? 0) }
+            .onAppear {
+                guard !initialized else { return }
+                symbol = asset?.symbol ?? ""; name = asset?.name ?? ""
+                quantity = asset.map { cryptoQuantityText($0.initialQty) } ?? ""
+                price = asset.map { amountText($0.price) } ?? ""
+                initialized = true
+            }
             .confirmationDialog("Удалить актив?", isPresented: $deleting, titleVisibility: .visible) {
                 Button("Удалить", role: .destructive) { if let asset, model.mutate("deleteAsset", [accountID, asset.id], failure: { localError = $0 }) { dismiss() } }
             }
@@ -78,13 +118,101 @@ struct AssetForm: View {
     private func save() {
         do {
             let ticker = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            guard !ticker.isEmpty, let qty = Double(quantity.replacingOccurrences(of: ",", with: ".")), qty.isFinite, qty >= 0 else { throw FinanceError.message("Проверь тикер и количество") }
-            let cents = try model.cents(price)
+            guard !ticker.isEmpty else { throw FinanceError.message("Напиши тикер актива") }
+            guard model.snapshot?.state.accounts.contains(where: { $0.id == accountID && $0.kind == "crypto" }) == true else {
+                throw FinanceError.message("Криптосчёт больше недоступен")
+            }
+            let initial: Double
+            if asset != nil {
+                guard let currentAsset else { throw FinanceError.message("Актив больше недоступен") }
+                initial = currentAsset.initialQty
+            } else {
+                initial = try parsedCryptoQuantity(quantity, allowZero: true)
+            }
+            let cents: Int
+            if price.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { cents = 0 }
+            else { cents = try model.cents(price) }
             guard cents >= 0 else { throw FinanceError.message("Курс не может быть отрицательным") }
-            let initial = (asset?.initialQty ?? 0) + qty - (asset?.qty ?? asset?.initialQty ?? 0)
             var args: [String: Any] = ["symbol": ticker, "name": name.isEmpty ? ticker : name, "initialQty": initial, "price": cents]
             if let asset { args["id"] = asset.id }
             if model.mutate("saveAsset", [accountID, args], failure: { localError = $0 }) { dismiss() }
+        } catch { localError = error.localizedDescription }
+    }
+}
+
+struct AssetQuantityCorrectionView: View {
+    @EnvironmentObject var model: WalletModel
+    @Environment(\.dismiss) private var dismiss
+    let accountID: String
+    let assetID: String
+    @State private var quantity = ""
+    @State private var valuation = ""
+    @State private var reason = ""
+    @State private var lastAutoValuation = ""
+    @State private var initialized = false
+    @State private var localError: String?
+
+    private var asset: Asset? {
+        model.snapshot?.derived.cryptoAssets.first { $0.id == assetID && $0.accountId == accountID }
+    }
+    private var delta: Double? {
+        guard let asset, let target = try? parsedCryptoQuantity(quantity, allowZero: true) else { return nil }
+        return ((target - (asset.qty ?? 0)) * 1e8).rounded() / 1e8
+    }
+    var body: some View {
+        Form {
+            if let asset {
+                Section {
+                    LabeledContent("По учёту", value: "\(cryptoQuantityText(asset.qty ?? 0)) \(asset.symbol)")
+                    TextField("Фактическое количество \(asset.symbol)", text: $quantity)
+                        .keyboardType(.decimalPad).accessibilityIdentifier("asset.correction.quantity")
+                    if let delta, delta != 0 {
+                        Text("\(delta > 0 ? "Добавится" : "Спишется") \(cryptoQuantityText(abs(delta))) \(asset.symbol)")
+                            .font(LumoType.body).foregroundStyle(.secondary)
+                    }
+                }
+                Section {
+                    TextField("Оценка изменения, \(model.currency)", text: $valuation)
+                        .keyboardType(.decimalPad).accessibilityIdentifier("asset.correction.amount")
+                    TextField("Причина (необязательно)", text: $reason, axis: .vertical)
+                } footer: {
+                    Text("Исправление появится в истории с прежним и новым количеством. Карта, наличные и конверты не изменятся. Для уменьшения количества нужна оценка больше нуля.")
+                }
+            } else {
+                Text("Актив больше недоступен")
+            }
+            if let localError { Text(localError).foregroundStyle(.red) }
+        }
+        .navigationTitle("Исправить количество").navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Записать") { save() }.disabled(asset == nil) } }
+        .onAppear {
+            guard !initialized, let asset else { return }
+            quantity = cryptoQuantityText(asset.qty ?? 0)
+            initialized = true
+        }
+        .onChange(of: quantity) { _, _ in updateValuation() }
+    }
+    private func updateValuation() {
+        guard valuation.isEmpty || valuation == lastAutoValuation, let asset, let delta, asset.price > 0 else { return }
+        let value = abs(delta) * Double(asset.price)
+        guard value.isFinite, value < 9_000_000_000_000_000 else { return }
+        lastAutoValuation = amountText(Int(value.rounded()))
+        valuation = lastAutoValuation
+    }
+    private func save() {
+        do {
+            guard let asset, let delta, delta != 0 else { throw FinanceError.message("Укажи новое количество, отличное от текущего") }
+            let target = try parsedCryptoQuantity(quantity, allowZero: true)
+            let cents: Int
+            if delta > 0 && valuation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { cents = 0 }
+            else { cents = try model.cents(valuation) }
+            guard cents >= 0, delta > 0 || cents > 0 else { throw FinanceError.message("Укажи положительную оценку списания в \(model.currency)") }
+            let label = "Корректировка остатка: \(cryptoQuantityText(asset.qty ?? 0)) → \(cryptoQuantityText(target)) \(asset.symbol)"
+            let note = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            let draft: [String: Any] = ["type": delta > 0 ? "crypto_buy" : "crypto_spend", "assetId": asset.id,
+                "qty": abs(delta), "amount": cents, "accountId": NSNull(), "date": WalletModel.dateKey(Date()),
+                "comment": label + (note.isEmpty ? "" : ". \(note)")]
+            if model.mutate("addTransaction", [draft], failure: { localError = $0 }) { dismiss() }
         } catch { localError = error.localizedDescription }
     }
 }
@@ -96,6 +224,7 @@ struct EnvelopeForm: View {
     @State private var name = ""
     @State private var goal = "0"
     @State private var localError: String?
+    @State private var initialized = false
     var body: some View {
         Form {
             Section { TextField("Название", text: $name); TextField("Цель, \(model.currency)", text: $goal).keyboardType(.decimalPad) }
@@ -103,7 +232,10 @@ struct EnvelopeForm: View {
             if let localError { Text(localError).foregroundStyle(.red) }
         }.navigationTitle("Конверт").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Готово") { save() } } }
-            .onAppear { name = envelope.name; goal = amountText(envelope.goal) }
+            .onAppear {
+                guard !initialized else { return }
+                name = envelope.name; goal = amountText(envelope.goal); initialized = true
+            }
     }
     private func save() {
         do {

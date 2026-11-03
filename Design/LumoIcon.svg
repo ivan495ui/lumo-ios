@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>lumo</title>
+  <desc>A folded blue L on graphite. The square artwork is opaque; the operating system supplies its own icon mask.</desc>
+  <defs>
+    <linearGradient id="ground" x1="180" y1="0" x2="875" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#141C2A"/>
+      <stop offset=".49" stop-color="#0C111A"/>
+      <stop offset="1" stop-color="#080A0E"/>
+    </linearGradient>
+    <radialGradient id="ambient" cx="0" cy="0" r="1" gradientTransform="translate(487 446) rotate(88) scale(531 527)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#18375F" stop-opacity=".64"/>
+      <stop offset=".7" stop-color="#18375F" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#18375F" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="346" y1="230" x2="674" y2="799" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#72ADFF"/>
+      <stop offset=".43" stop-color="#4690FF"/>
+      <stop offset="1" stop-color="#2466CB"/>
+    </linearGradient>
+    <linearGradient id="upright" x1="280" y1="372" x2="503" y2="414" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#85B9FF" stop-opacity=".66"/>
+      <stop offset=".36" stop-color="#72ADFF" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#1D58B2" stop-opacity=".26"/>
+    </linearGradient>
+    <linearGradient id="foot" x1="476" y1="623" x2="476" y2="782" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#69A6FF"/>
+      <stop offset=".15" stop-color="#4690FF"/>
+      <stop offset="1" stop-color="#3579E0"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="469" y1="560" x2="487" y2="658" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#19498E"/>
+      <stop offset="1" stop-color="#3179E2"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="319" y1="230" x2="699" y2="782" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D3E5FF" stop-opacity=".62"/>
+      <stop offset=".38" stop-color="#A5CAFF" stop-opacity=".14"/>
+      <stop offset=".65" stop-color="#8CBDFF" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#1D4987" stop-opacity=".24"/>
+    </linearGradient>
+    <linearGradient id="crease" x1="490" y1="585" x2="403" y2="696" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B2B59" stop-opacity=".61"/>
+      <stop offset="1" stop-color="#1C60BE" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="lift" x="150" y="130" width="760" height="805" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="27" stdDeviation="23" flood-color="#00040C" flood-opacity=".48"/>
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#020812" flood-opacity=".28"/>
+    </filter>
+    <clipPath id="mark-clip">
+      <path d="M318 230H449Q473 230 473 254V552Q473 575 489 591L519 621H741Q765 621 765 645V758Q765 782 741 782H341Q283 782 283 724V265Q283 230 318 230Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#ground)"/>
+  <rect width="1024" height="1024" fill="url(#ambient)"/>
+
+  <g filter="url(#lift)">
+    <path d="M318 230H449Q473 230 473 254V552Q473 575 489 591L519 621H741Q765 621 765 645V758Q765 782 741 782H341Q283 782 283 724V265Q283 230 318 230Z" fill="url(#body)"/>
+    <g clip-path="url(#mark-clip)">
+      <path d="M280 230H473V552Q473 575 489 591L519 621H280Z" fill="url(#upright)"/>
+      <path d="M283 563L407 687Q422 702 444 702H765V782H283Z" fill="url(#foot)"/>
+      <path d="M473 552Q473 575 489 591L519 621H741Q765 621 765 645V654H511Q492 654 479 641L435 597Z" fill="url(#fold)"/>
+      <path d="M283 563L407 687Q422 702 444 702H765V706H440Q417 706 401 690L283 572Z" fill="url(#crease)"/>
+      <path d="M284 564L408 688Q422 702 444 702H765" fill="none" stroke="#A7CEFF" stroke-opacity=".27" stroke-width="2"/>
+      <path d="M519 622H741Q764 622 764 645" fill="none" stroke="#B6D5FF" stroke-opacity=".54" stroke-width="2"/>
+    </g>
+    <path d="M318 231H449Q472 231 472 254V552Q472 575 488 592L519 622H741Q764 622 764 645V758Q764 781 741 781H341Q284 781 284 724V265Q284 231 318 231Z" fill="none" stroke="url(#edge)" stroke-width="2"/>
+    <path d="M294 543V267Q294 241 320 241H441" fill="none" stroke="#C1DBFF" stroke-opacity=".16" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

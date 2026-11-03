@@ -14,6 +14,8 @@ with ZipFile(ipa) as archive:
     info = plistlib.loads(archive.read(info_name))
     assert info['CFBundleIdentifier'] == 'app.lumo.wallet', 'Wrong bundle ID'
     assert info['MinimumOSVersion'] == '26.0', 'Wrong deployment target'
+    assert info.get('CFBundleShortVersionString') == '2.1', 'Wrong release version'
+    assert info.get('NSFaceIDUsageDescription'), 'Missing Face ID purpose string'
     executable = archive.read(app + info['CFBundleExecutable'])
     magic, cpu, subtype, filetype, count, size, flags, reserved = struct.unpack_from('<8I', executable)
     assert magic == 0xFEEDFACF and cpu == 0x0100000C, 'Expected ARM64 Mach-O'
@@ -35,7 +37,7 @@ with ZipFile(ipa) as archive:
     engine_hash = hashlib.sha256(archive.read(engine_name)).hexdigest()
     source_hash = hashlib.sha256((Path(__file__).resolve().parent.parent / 'Sources/LumoCore/Resources/finance-engine.js').read_bytes()).hexdigest()
     assert engine_hash == source_hash, 'Financial engine differs from verified source'
-    print(json.dumps({'bundle': info['CFBundleIdentifier'], 'minimumIOS': info['MinimumOSVersion'],
+    print(json.dumps({'bundle': info['CFBundleIdentifier'], 'version': info['CFBundleShortVersionString'], 'minimumIOS': info['MinimumOSVersion'],
         'sdk': info.get('DTSDKName'), 'architecture': 'arm64', 'nativeSwiftUI': True,
         'engineSHA256': engine_hash, 'codeSignaturePresent': signed,
         'provisioningPresent': app + 'embedded.mobileprovision' in names,

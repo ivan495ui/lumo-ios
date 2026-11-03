@@ -26,7 +26,22 @@ struct TransactionForm: View {
     @State private var lastAutoAmount = ""
 
     private var fiatAccounts: [Account] { (model.snapshot?.state.accounts ?? []).filter { $0.kind != "crypto" && (!$0.archived || $0.id == existing?.accountId || $0.id == existing?.toAccountId) } }
-    private var assets: [Asset] { model.snapshot?.derived.cryptoAssets ?? [] }
+    private var assets: [Asset] {
+        let all = model.snapshot?.derived.cryptoAssets ?? []
+        if existing == nil, let initialAccountID,
+           model.snapshot?.state.accounts.contains(where: { $0.id == initialAccountID && $0.kind == "crypto" }) == true {
+            return all.filter { $0.accountId == initialAccountID }
+        }
+        let visibleIDs = Set((model.snapshot?.state.accounts ?? []).filter { $0.kind == "crypto" && !$0.archived }.map(\.id))
+        return all.filter { visibleIDs.contains($0.accountId ?? "") || $0.id == existing?.assetId }
+    }
+    private var newAssetAccountID: String? {
+        if let initialAccountID,
+           model.snapshot?.state.accounts.contains(where: { $0.id == initialAccountID && $0.kind == "crypto" && !$0.archived }) == true {
+            return initialAccountID
+        }
+        return model.snapshot?.state.accounts.first { $0.kind == "crypto" && !$0.archived }?.id
+    }
     private var envelopes: [Envelope] { model.snapshot?.state.envelopes ?? [] }
     private var categories: [LedgerCategory] { (model.snapshot?.state.categories ?? []).filter { $0.kind == (kind == .income ? "income" : "expense") } }
 
@@ -35,8 +50,10 @@ struct TransactionForm: View {
             if existing == nil {
                 Section {
                     Picker("Операция", selection: Binding(get: { kind }, set: { value in
-                        kind = value; applyDefaults(); toEnvelopeID = ""; taxable = false; fiatFlow = false
-                        if !assets.contains(where: { $0.id == assetID }) { assetID = assets.first?.id ?? "" }
+                        let wasCrypto = kind.isCrypto
+                        kind = value; applyDefaults(); toEnvelopeID = ""; taxable = false; fiatFlow = value == .cryptoSell
+                        if wasCrypto != value.isCrypto { amount = ""; quantity = ""; lastAutoAmount = "" }
+                        if !assets.contains(where: { $0.id == assetID }) { selectDefaultAsset() }
                     })) { ForEach(TransactionKind.allCases) { Text($0.title).tag($0) } }
                 }
             }
@@ -46,8 +63,15 @@ struct TransactionForm: View {
                         Text("Выбери актив").tag("")
                         ForEach(assets) { asset in Text("\(asset.symbol) · \(model.accountName(asset.accountId) ?? "")").tag(asset.id) }
                     }
-                    TextField("Количество", text: $quantity).keyboardType(.decimalPad)
-                    if assets.isEmpty { Text("Сначала добавь актив на криптосчёте.").font(LumoType.caption).foregroundStyle(.secondary) }
+                    TextField("Количество \(assets.first { $0.id == assetID }?.symbol ?? "актива")", text: $quantity)
+                        .keyboardType(.decimalPad).accessibilityIdentifier("transaction.quantity")
+                    if assets.isEmpty {
+                        if let accountID = newAssetAccountID {
+                            NavigationLink("Добавить USDT или другой актив") { AssetForm(accountID: accountID) }
+                        } else {
+                            Text("Сначала добавь криптосчёт в разделе «Счета».").font(LumoType.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     if kind != .cryptoSpend {
                         Toggle(kind == .cryptoBuy ? "Оплачено с карты / наличными" : "Зачислено на карту / наличными", isOn: $fiatFlow)
                     }
@@ -72,7 +96,7 @@ struct TransactionForm: View {
                 }
             } header: { Text(kind.isCrypto && !fiatFlow ? "Стоимость в \(model.currency)" : "Сумма") }
             footer: {
-                if kind.isCrypto && !fiatFlow { Text("Оценка операции. Остаток на карте и наличные не изменятся.") }
+                if kind.isCrypto && !fiatFlow { Text("Оценка записи в \(model.currency). Карта и наличные не изменятся; криптовалюта учитывается отдельно от фиатных конвертов.") }
                 if kind == .adjustment { Text("Введи разницу с текущим остатком. Например, −10 уменьшит счёт на 10 \(model.currency).") }
             }
 
@@ -128,6 +152,9 @@ struct TransactionForm: View {
             .onAppear { initialize() }
             .onChange(of: quantity) { _, _ in updateCryptoCost() }
             .onChange(of: assetID) { _, _ in updateCryptoCost() }
+            .onChange(of: assets.map(\.id)) { _, ids in
+                if existing == nil && !ids.contains(assetID) { selectDefaultAsset() }
+            }
     }
 
     private var incomePreview: PreparedTransaction? {
@@ -144,9 +171,19 @@ struct TransactionForm: View {
             "envelopeId": [.expense, .refund, .envTransfer].contains(kind) && !envelopeID.isEmpty ? envelopeID as Any : NSNull(),
             "toEnvelopeId": kind == .envTransfer && !toEnvelopeID.isEmpty ? toEnvelopeID as Any : NSNull()]
         if kind.isCrypto {
-            guard let qty = Double(quantity.replacingOccurrences(of: ",", with: ".")), qty.isFinite, qty > 0 else { throw FinanceError.message("Введите количество криптовалюты") }
+            guard assets.contains(where: { $0.id == assetID }) else { throw FinanceError.message("Выбери актив этого криптосчёта") }
+            let qty = try parsedCryptoQuantity(quantity)
+            if fiatFlow {
+                guard cents > 0, fiatAccounts.contains(where: { $0.id == accountID }) else {
+                    throw FinanceError.message("Для денежной части выбери карту или наличные и укажи сумму больше нуля в \(model.currency)")
+                }
+            }
             draft["assetId"] = assetID
             draft["qty"] = qty
+            // Old web entries can carry a spending envelope/category not exposed
+            // by this form. A comment edit must preserve that recorded effect.
+            if let envelopeID = existing?.envelopeId { draft["envelopeId"] = envelopeID }
+            if let categoryID = existing?.categoryId { draft["categoryId"] = categoryID }
         }
         if kind == .income { draft["taxable"] = taxable; draft["reserved"] = reserved }
         return draft
@@ -162,8 +199,8 @@ struct TransactionForm: View {
     }
     private func updateCryptoCost() {
         // Preserve an explicitly entered or historical valuation.
-        guard kind.isCrypto, amount.isEmpty || amount == lastAutoAmount, let qty = Double(quantity.replacingOccurrences(of: ",", with: ".")),
-              qty.isFinite, let asset = assets.first(where: { $0.id == assetID }) else { return }
+        guard initialized, kind.isCrypto, amount.isEmpty || amount == lastAutoAmount,
+              let qty = try? parsedCryptoQuantity(quantity), let asset = assets.first(where: { $0.id == assetID }) else { return }
         let value = qty * Double(asset.price)
         guard value.isFinite, abs(value) < 9_000_000_000_000_000 else { return }
         lastAutoAmount = amountText(Int(value.rounded()))
@@ -178,11 +215,12 @@ struct TransactionForm: View {
         envelopeID = existing?.envelopeId ?? ""
         if existing == nil { applyDefaults() }
         toEnvelopeID = existing?.toEnvelopeId ?? ""
-        assetID = existing?.assetId ?? assets.first { $0.accountId == initialAccountID }?.id ?? assets.first?.id ?? ""
+        if let existing { assetID = existing.assetId ?? "" }
+        else { selectDefaultAsset() }
         comment = existing?.comment ?? ""
         amount = existing.map { amountText($0.amount) } ?? ""
-        quantity = existing?.qty.map { String($0) } ?? ""
-        fiatFlow = existing?.accountId != nil && (existing?.amount ?? 0) > 0
+        quantity = existing?.qty.map { cryptoQuantityText($0) } ?? ""
+        fiatFlow = existing.map { $0.accountId != nil && kind.isCrypto && kind != .cryptoSpend } ?? (kind == .cryptoSell)
         taxable = existing?.taxable ?? ((existing?.taxAccrued ?? 0) > 0)
         reserved = existing?.reserved ?? model.snapshot?.state.settings.autoReserve ?? true
         if let key = existing?.date {
@@ -194,5 +232,10 @@ struct TransactionForm: View {
     private func applyDefaults() {
         categoryID = categories.first { $0.id == (kind == .income ? "cat_income_other" : "cat_other") }?.id ?? ""
         envelopeID = [.expense, .refund].contains(kind) ? (envelopes.first { $0.id == "env_personal" }?.id ?? envelopes.first?.id ?? "") : ""
+    }
+    private func selectDefaultAsset() {
+        assetID = assets.first { $0.accountId == initialAccountID && $0.symbol.uppercased() == "USDT" }?.id
+            ?? assets.first { $0.accountId == initialAccountID }?.id
+            ?? assets.first { $0.symbol.uppercased() == "USDT" }?.id ?? assets.first?.id ?? ""
     }
 }
