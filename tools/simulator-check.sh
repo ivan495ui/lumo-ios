@@ -15,7 +15,7 @@ if [ "$mode" = prepare ]; then
   # Compile before booting iOS to keep memory available on the standard free runner.
   python3 tools/run-bounded.py 360 xcodebuild -project lumo.xcodeproj -scheme lumo -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee build/artifacts/simulator-build.log
   xcrun simctl boot "$device"
-  python3 tools/run-bounded.py 180 xcrun simctl bootstatus "$device" -b
+  python3 tools/run-bounded.py 360 xcrun simctl bootstatus "$device" -b
   xcrun simctl ui "$device" appearance dark
   xcrun simctl status_bar "$device" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
   xcrun simctl install "$device" build/simulator/Build/Products/Debug-iphonesimulator/lumo.app
