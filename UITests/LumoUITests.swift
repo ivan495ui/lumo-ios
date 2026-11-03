@@ -158,7 +158,7 @@ final class LumoUITests: XCTestCase {
         XCTAssertEqual(try exactEnvelopeAmount(personal.label), expected)
         let visible = try XCTUnwrap(personal.label.components(separatedBy: ", ").dropFirst().first)
         XCTAssertFalse(visible.contains(","), "The overview tile should display whole units")
-        XCTAssertTrue(visible.contains("≈"), "A fractional ledger balance needs the approximation marker")
+        XCTAssertFalse(visible.contains("≈"), "Envelope readouts omit the approximation marker by the owner's choice")
         var exact = expected, rounded = Decimal()
         NSDecimalRound(&rounded, &exact, 0, .plain)
         XCTAssertEqual(number(in: visible), rounded)

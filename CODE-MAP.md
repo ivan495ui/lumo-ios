@@ -16,7 +16,7 @@
 | `App/CryptoEntryView.swift` | 191 |
 | `App/CurrencySettingsView.swift` | 107 |
 | `App/EnvelopeDecoration.swift` | 26 |
-| `App/EnvelopeStrip.swift` | 192 |
+| `App/EnvelopeStrip.swift` | 187 |
 | `App/EnvelopesView.swift` | 189 |
 | `App/ExchangeDisplay.swift` | 78 |
 | `App/HistoryView.swift` | 162 |
@@ -28,7 +28,7 @@
 | `App/SecureSettingsStore.swift` | 45 |
 | `App/SettingsView.swift` | 158 |
 | `App/TransactionForm.swift` | 307 |
-| `App/WalletModel.swift` | 228 |
+| `App/WalletModel.swift` | 229 |
 | `Package.swift` | 13 |
 | `project.yml` | 56 |
 | `Sources/LumoCore/DisplayMoney.swift` | 98 |

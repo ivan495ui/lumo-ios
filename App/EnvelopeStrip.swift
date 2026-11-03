@@ -76,9 +76,6 @@ struct EnvelopeStrip: View {
             Spacer(minLength: 0)
 
             HStack(alignment: .firstTextBaseline, spacing: currencySpacing) {
-                if roundedValue(envelope).approximate {
-                    Text("≈").font(LumoType.caption).foregroundStyle(.secondary)
-                }
                 if roundedValue(envelope).symbolLeading { unit(envelope) }
                 Text(roundedValue(envelope).number)
                     .font(LumoType.cardAmount)
@@ -112,7 +109,7 @@ struct EnvelopeStrip: View {
                     .fixedSize()
             }
 
-            Text(model.displayMoney(envelope.balance ?? 0, rounded: true))
+            Text(model.envelopeMoney(envelope.balance ?? 0))
                 .font(LumoType.cardAmount)
                 .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
@@ -143,9 +140,7 @@ struct EnvelopeStrip: View {
             // The number keeps title3, including cents; only the currency is caption.
             let numberWidth = (roundedValue(envelope).number as NSString)
                 .size(withAttributes: [.font: amountFont]).width
-            let approximateWidth = roundedValue(envelope).approximate
-                ? ("≈" as NSString).size(withAttributes: [.font: currencyFont]).width + currencySpacing : 0
-            let amountWidth = numberWidth + currencySpacing + currencyWidth + approximateWidth
+            let amountWidth = numberWidth + currencySpacing + currencyWidth
             let nameWidth = (displayName(envelope) as NSString)
                 .size(withAttributes: [.font: labelFont]).width
             // Keep a small reserve for rounding and SwiftUI/UIKit font metrics.
@@ -181,7 +176,7 @@ struct EnvelopeStrip: View {
     }
 
     private func accessibilityLabel(_ envelope: LumoCore.Envelope) -> String {
-        "\(envelope.name), \(model.displayMoney(envelope.balance ?? 0, rounded: true)), \(share(envelope)) от дохода. Точно в учёте: \(money(envelope.balance ?? 0, currency: currency))"
+        "\(envelope.name), \(model.envelopeMoney(envelope.balance ?? 0)), \(share(envelope)) от дохода. Точно в учёте: \(money(envelope.balance ?? 0, currency: currency))"
     }
     private func roundedValue(_ envelope: LumoCore.Envelope) -> MoneyValue {
         model.displayValue(envelope.balance ?? 0, rounded: true)

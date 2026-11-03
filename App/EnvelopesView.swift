@@ -12,7 +12,7 @@ struct EnvelopesView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Распределено по конвертам")
                             .font(LumoType.body).foregroundStyle(.secondary)
-                        Text(model.displayMoney(snapshot.derived.envelopeTotal, rounded: true))
+                        Text(model.envelopeMoney(snapshot.derived.envelopeTotal))
                             .font(LumoType.balance).monospacedDigit()
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("envelopes.balance")
@@ -77,7 +77,7 @@ struct EnvelopesView: View {
 
             if envelope.goal > 0 {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("Цель · \(model.displayMoney(envelope.goal, rounded: true))")
+                    Text("Цель · \(model.envelopeMoney(envelope.goal))")
                         .font(LumoType.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                     ProgressView(value: min(1, max(0, Double(envelope.balance ?? 0) / Double(envelope.goal))))
@@ -94,7 +94,7 @@ struct EnvelopesView: View {
     }
 
     private func amount(_ envelope: Envelope) -> some View {
-        Text(model.displayMoney(envelope.balance ?? 0, rounded: true))
+        Text(model.envelopeMoney(envelope.balance ?? 0))
             .font(LumoType.cardAmount).monospacedDigit()
             .foregroundStyle(LumoTheme.text)
     }

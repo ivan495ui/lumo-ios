@@ -57,6 +57,7 @@ final class WalletModel: ObservableObject {
     var effectiveDisplayCurrency: String { exchange.effective(base: currency) }
     func displayValue(_ cents: Int, rounded: Bool = false) -> MoneyValue { exchange.value(cents, base: currency, rounded: rounded) }
     func displayMoney(_ cents: Int, rounded: Bool = false, sign: String = "") -> String { displayValue(cents, rounded: rounded).text(sign: sign) }
+    func envelopeMoney(_ cents: Int) -> String { displayMoney(cents, rounded: true).replacingOccurrences(of: "≈ ", with: "") }
     func estimatedMoney(_ cents: Int) -> String {
         let value = displayValue(cents)
         return value.approximate ? value.text() : "≈ " + value.text()
