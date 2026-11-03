@@ -46,7 +46,7 @@ struct HistoryView: View {
                                     HStack(spacing: 8) {
                                         TransactionRow(transaction: transaction, showsDate: false, compact: true)
                                         Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
-                                    }.padding(.horizontal, 14).padding(.vertical, 7)
+                                    }.padding(.horizontal, 14).padding(.vertical, 7).contentShape(Rectangle())
                                 }.buttonStyle(.plain)
                                 if transaction.id != grouped[day]?.last?.id { Divider().padding(.leading, 61) }
                             }

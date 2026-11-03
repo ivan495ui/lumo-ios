@@ -4,7 +4,7 @@
 
 | Файл | Строк |
 |---|---:|
-| `.github/workflows/ios.yml` | 78 |
+| `.github/workflows/ios.yml` | 85 |
 | `App/AccountForms.swift` | 292 |
 | `App/AccountsView.swift` | 164 |
 | `App/AnalyticsView.swift` | 84 |
@@ -45,7 +45,7 @@
 | `tests/LumoCoreTests/ProtectedBackupTests.swift` | 125 |
 | `tools/bridge.js` | 48 |
 | `tools/bundle-engine.mjs` | 24 |
-| `tools/simulator-check.sh` | 36 |
+| `tools/simulator-check.sh` | 40 |
 | `UITests/LumoUITests.swift` | 304 |
 | `Vendor/Finance/commands.js` | 56 |
 | `Vendor/Finance/core.js` | 534 |

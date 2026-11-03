@@ -112,7 +112,7 @@ struct OverviewView: View {
                         Text(snapshot.derived.envelopes.contains(where: { ($0.balance ?? 0) < 0 }) ? "Выровнять конверты после перерасхода" : snapshot.derived.unallocated > 0 ? "Распределить свободные \(model.displayMoney(snapshot.derived.unallocated))" : "Проверить распределение")
                         Spacer()
                         Image(systemName: "chevron.right").font(.caption2)
-                    }.font(LumoType.caption).frame(minHeight: 44)
+                    }.font(LumoType.caption).frame(minHeight: 44).contentShape(Rectangle())
                 }.buttonStyle(.plain).foregroundStyle(LumoTheme.accent)
             }
         }
@@ -139,7 +139,7 @@ struct OverviewView: View {
                                 Text(model.displayMoney(account.balance ?? 0)).font(LumoType.amount).monospacedDigit()
                             }
                             Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
-                        }.padding(.horizontal, 14).padding(.vertical, 16)
+                        }.padding(.horizontal, 14).padding(.vertical, 16).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityIdentifier("overview.account.\(account.id)")
                     if account.id != model.visibleAccounts.last?.id { Divider().padding(.leading, 48) }
                 }

@@ -7,6 +7,11 @@ on:
         type: choice
         options: [full, design, device]
         default: full
+      ui_test:
+        description: UI scenarios to execute
+        type: choice
+        options: [all, crypto]
+        default: all
 permissions:
   contents: read
 concurrency:
@@ -59,6 +64,8 @@ jobs:
           retention-days: 1
       - name: Native UI checks
         if: inputs.mode != 'device'
+        env:
+          LUMO_UI_TEST: ${{ inputs.ui_test }}
         run: bash tools/simulator-check.sh test
       - name: Upload preview and logs
         if: always()

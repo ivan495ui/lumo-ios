@@ -147,7 +147,7 @@ struct CryptoAccountView: View {
                                 }
                                 Text("\(transaction.accountId == nil ? "Оценка записи" : transaction.type == "crypto_sell" ? "Получено" : "Оплачено"): \(model.displayMoney(transaction.amount))")
                                     .font(LumoType.caption).foregroundStyle(.secondary)
-                            }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                            }.padding(14).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                         if transaction.id != transactions.last?.id { Divider().padding(.leading, 14) }
                     }
