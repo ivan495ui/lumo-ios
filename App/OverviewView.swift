@@ -29,7 +29,7 @@ struct OverviewView: View {
         let amount = showTotal ? snapshot.derived.total : snapshot.derived.fiatTotal
         return VStack(alignment: .leading, spacing: 12) {
             balanceMode(snapshot, showTotal: showTotal)
-            BalanceValue(cents: amount, currency: model.currency, identifier: "overview.balance", onAccent: true, presentation: model.displayValue(amount))
+            BalanceValue(cents: amount, currency: model.currency, identifier: "overview.balance", onAccent: true, presentation: model.displayValue(amount), showsApproximation: false)
             Rectangle().fill(Color.white.opacity(0.12)).frame(height: 0.5)
             dailyActions
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)

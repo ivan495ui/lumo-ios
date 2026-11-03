@@ -24,12 +24,17 @@ struct BalanceValue: View {
     var onAccent = false
     var presentation: MoneyValue? = nil
     var sign = ""
+    var showsApproximation = true
     private var value: MoneyValue { presentation ?? MoneyValue(cents: cents, currency: currency) }
+    private var fullText: String {
+        let text = value.text(sign: sign)
+        return !showsApproximation && text.hasPrefix("≈ ") ? String(text.dropFirst(2)) : text
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var body: some View {
         if value.symbolLeading {
-            Text(value.text(sign: sign)).font(LumoType.balance).foregroundStyle(LumoTheme.text)
+            Text(fullText).font(LumoType.balance).foregroundStyle(LumoTheme.text)
                 .monospacedDigit().fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.numericText())
                 .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
@@ -54,10 +59,10 @@ struct BalanceValue: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
     private var number: some View {
-        Text((value.approximate ? "≈ " : "") + sign + value.number).font(LumoType.balance).foregroundStyle(LumoTheme.text)
+        Text((showsApproximation && value.approximate ? "≈ " : "") + sign + value.number).font(LumoType.balance).foregroundStyle(LumoTheme.text)
             .monospacedDigit().contentTransition(.numericText())
             .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: cents)
-            .accessibilityLabel(value.text(sign: sign))
+            .accessibilityLabel(fullText)
             .accessibilityIdentifier(identifier ?? "")
     }
     private var unit: some View {

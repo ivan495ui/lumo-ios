@@ -82,7 +82,7 @@ final class LumoUITests: XCTestCase {
         NSDecimalRound(&expected, &converted, 2, .plain)
         waitForNumber(expected, in: balance)
         XCTAssertTrue(balance.label.contains("$"), "The readout must use USD as well as a converted number")
-        XCTAssertTrue(balance.label.contains("≈"))
+        XCTAssertFalse(balance.label.contains("≈"), "The main balance omits the approximation marker by the owner's choice")
         XCTAssertNotEqual(number(in: balance.label), original, "Changing only the currency symbol is insufficient")
 
         app.buttons["Расход"].tap()
